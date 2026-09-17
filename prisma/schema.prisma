@@ -99,3 +99,66 @@ model AuditLog {
   @@index([createdAt])
   @@index([entityType, entityId])
 }
+
+/// Ciclo de vida de una publicación. Solo PUBLISHED es visible al público.
+enum ProjectStatus {
+  DRAFT
+  REVIEW
+  PUBLISHED
+  ARCHIVED
+}
+
+/// Proyecto académico de estudiantes.
+model Project {
+  id      String @id @default(cuid())
+  /// Identificador legible usado en la URL pública.
+  slug    String @unique
+  title   String
+  summary String
+
+  /// Área académica. Queda como texto libre hasta que se defina la lista
+  /// oficial del colegio; convertirla en enum después es una migración simple.
+  area String
+
+  /// 0 corresponde a preescolar y 1 a 11 a los grados de primero a once.
+  gradeLevel Int
+
+  /// Año lectivo en que se desarrolló el proyecto.
+  year Int
+
+  status      ProjectStatus @default(DRAFT)
+  publishedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  authors Author[]
+
+  @@index([status, publishedAt])
+  @@index([area])
+  @@index([gradeLevel])
+  @@index([year])
+}
+
+/// Estudiante autor de un proyecto.
+///
+/// Se guarda el nombre completo porque el colegio lo necesita para su propio
+/// registro, pero al público solo se muestra reducido: nombre más inicial del
+/// apellido. El nombre completo únicamente se publica si un administrador
+/// marca que la familia firmó la autorización (Ley 1581 de 2012).
+model Author {
+  id        String @id @default(cuid())
+  projectId String
+
+  /// Nombres y apellidos se guardan separados a propósito: deducir dónde
+  /// termina el nombre en «María Fernanda Rodríguez Gómez» es adivinar, y
+  /// adivinar mal publica más de lo autorizado.
+  givenNames  String
+  familyNames String
+
+  fullNameAuthorized Boolean @default(false)
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}

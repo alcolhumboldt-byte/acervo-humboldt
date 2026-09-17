@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "postinstall": "prisma generate",
     "db:seed": "prisma db seed",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "db:ejemplos": "tsx prisma/seed-ejemplos.ts"
   },
   "dependencies": {
     "@node-rs/argon2": "^2.2.1",
