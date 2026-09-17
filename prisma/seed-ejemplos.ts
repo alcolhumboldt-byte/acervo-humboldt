@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { prisma } from "../src/lib/prisma";
+import { buildSearchText } from "../src/modules/discovery/search-text";
 
 /**
  * Datos de ejemplo para desarrollo.
@@ -94,13 +95,20 @@ async function main(): Promise<void> {
   for (const ejemplo of EJEMPLOS) {
     const { authors, status, ...datos } = ejemplo;
 
+    const publishedAt =
+      status === "PUBLISHED" ? new Date(datos.year, 10, 1) : null;
+    const searchText = buildSearchText(datos);
+
     await prisma.project.upsert({
       where: { slug: ejemplo.slug },
-      update: {},
+      // Al reejecutar se refrescan los datos del proyecto, pero no los
+      // autores: volver a crearlos los duplicaría.
+      update: { ...datos, status, publishedAt, searchText },
       create: {
         ...datos,
         status,
-        publishedAt: status === "PUBLISHED" ? new Date(datos.year, 10, 1) : null,
+        publishedAt,
+        searchText,
         authors: { create: authors },
       },
     });

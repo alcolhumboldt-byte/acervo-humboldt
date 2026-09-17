@@ -129,6 +129,11 @@ model Project {
   status      ProjectStatus @default(DRAFT)
   publishedAt DateTime?
 
+  /// Título, resumen y área en minúsculas y sin tildes. Existe porque en
+  /// español la gente busca sin tildes: «geometria» debe encontrar
+  /// «Geometría». Se recalcula cada vez que se guarda el proyecto.
+  searchText String @default("")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

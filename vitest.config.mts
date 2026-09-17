@@ -7,6 +7,9 @@ const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 export default defineConfig({
   test: {
     environment: "node",
+    // Los tests de integración comparten una sola base de datos y limpian sus
+    // tablas. En paralelo se borran los datos unos a otros.
+    fileParallelism: false,
     setupFiles: ["./vitest.setup.ts"],
     include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
   },

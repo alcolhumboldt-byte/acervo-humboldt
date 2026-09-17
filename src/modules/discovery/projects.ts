@@ -1,5 +1,7 @@
+import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { displayAuthorName } from "@/modules/discovery/author-name";
+import { normalizeForSearch } from "@/modules/discovery/search-text";
 
 /**
  * Consultas del portal público.
@@ -95,4 +97,91 @@ export async function getPublishedProject(
   });
 
   return proyecto ? toPublicProject(proyecto) : null;
+}
+
+export const PAGE_SIZE = 12;
+
+export interface ProjectFilters {
+  area?: string;
+  gradeLevel?: number;
+  year?: number;
+  query?: string;
+  page?: number;
+}
+
+export interface SearchResult {
+  projects: PublicProject[];
+  total: number;
+  page: number;
+  pageCount: number;
+}
+
+export interface FilterOptions {
+  areas: string[];
+  grades: number[];
+  years: number[];
+}
+
+export async function searchPublishedProjects({
+  area,
+  gradeLevel,
+  year,
+  query,
+  page = 1,
+}: ProjectFilters): Promise<SearchResult> {
+  const pagina = Number.isFinite(page) && page >= 1 ? Math.floor(page) : 1;
+
+  const where: Prisma.ProjectWhereInput = {
+    status: "PUBLISHED",
+    ...(area ? { area } : {}),
+    ...(gradeLevel === undefined ? {} : { gradeLevel }),
+    ...(year === undefined ? {} : { year }),
+    // La búsqueda va contra searchText, que ya está sin tildes y en
+    // minúsculas, así que la consulta se normaliza igual antes de comparar.
+    ...(query ? { searchText: { contains: normalizeForSearch(query) } } : {}),
+  };
+
+  const [total, proyectos] = await Promise.all([
+    prisma.project.count({ where }),
+    prisma.project.findMany({
+      where,
+      orderBy: { publishedAt: "desc" },
+      skip: (pagina - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+      select: CAMPOS_PUBLICOS,
+    }),
+  ]);
+
+  return {
+    projects: proyectos.map(toPublicProject),
+    total,
+    page: pagina,
+    pageCount: Math.max(1, Math.ceil(total / PAGE_SIZE)),
+  };
+}
+
+/**
+ * Valores disponibles para los filtros.
+ *
+ * Solo salen de proyectos publicados: ofrecer un área que únicamente existe en
+ * un borrador delataría que ese borrador existe.
+ *
+ * Se recorren todos los publicados en una sola consulta. Para el tamaño de un
+ * archivo escolar es más barato que tres consultas distintas.
+ */
+export async function getFilterOptions(): Promise<FilterOptions> {
+  const proyectos = await prisma.project.findMany({
+    where: { status: "PUBLISHED" },
+    select: { area: true, gradeLevel: true, year: true },
+  });
+
+  return {
+    areas: [...new Set(proyectos.map((p) => p.area))].sort((a, b) =>
+      a.localeCompare(b, "es"),
+    ),
+    grades: [...new Set(proyectos.map((p) => p.gradeLevel))].sort(
+      (a, b) => a - b,
+    ),
+    years: [...new Set(proyectos.map((p) => p.year))].sort((a, b) => b - a),
+  };
 }

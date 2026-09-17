@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { AvisoNombres } from "@/components/aviso-nombres";
+import { ProjectCard } from "@/components/project-card";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { INSTITUCION } from "@/config/institucion";
-import { gradeLabel, listPublishedProjects } from "@/modules/discovery/projects";
+import { listPublishedProjects } from "@/modules/discovery/projects";
 
 /**
  * La portada se arma en cada visita.
@@ -56,31 +57,20 @@ export default async function Home() {
             <ul className="mt-6 grid gap-5 sm:grid-cols-2">
               {proyectos.map((proyecto) => (
                 <li key={proyecto.slug}>
-                  <Link
-                    href={`/proyectos/${proyecto.slug}`}
-                    className="block h-full rounded-lg border border-gris border-l-4 border-l-morado bg-blanco p-6 transition-colors hover:border-l-morado-hondo hover:bg-papel"
-                  >
-                    <p className="text-sm text-gris-texto">
-                      {proyecto.area} · {gradeLabel(proyecto.gradeLevel)} ·{" "}
-                      {proyecto.year}
-                    </p>
-
-                    <h3 className="mt-2 font-titulo text-xl leading-snug text-tinta">
-                      {proyecto.title}
-                    </h3>
-
-                    <p className="mt-3 text-sm leading-relaxed text-gris-texto">
-                      {proyecto.summary}
-                    </p>
-
-                    <p className="mt-4 text-sm text-azul">
-                      {proyecto.authors.join(", ")}
-                    </p>
-                  </Link>
+                  <ProjectCard proyecto={proyecto} />
                 </li>
               ))}
             </ul>
           )}
+
+          <p className="mt-8">
+            <Link
+              href="/proyectos"
+              className="font-bold text-morado-hondo underline"
+            >
+              Ver todos los proyectos
+            </Link>
+          </p>
 
           <div className="mt-8">
             <AvisoNombres />
