@@ -1,34 +1,99 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Acervo
 
-## Getting Started
+Repositorio web institucional del **Colegio Alejandro de Humboldt** (Sogamoso,
+Boyacá, Colombia). Preserva y divulga los proyectos académicos y los
+reconocimientos destacados de sus estudiantes, de preescolar a grado once.
 
-First, run the development server:
+Consta de un portal público para consultar las fichas de los proyectos y un
+panel interno para docentes y administradores.
+
+Proyecto de grado de Andrés Felipe Leal Alarcón, docente de la institución.
+
+> **Estado:** en desarrollo. El portal público funciona; el panel interno y el
+> flujo de solicitud de documentos todavía no están construidos.
+
+## Protección de datos
+
+Todos los autores son menores de edad, así que esto no es un añadido sino el
+eje del diseño:
+
+- **Nombres reducidos por defecto.** El portal muestra el primer nombre y la
+  inicial del primer apellido. El nombre completo solo aparece si un
+  administrador registra que la familia firmó la autorización correspondiente
+  (Ley 1581 de 2012).
+- **La conversión ocurre en la capa de datos.** El nombre completo de un
+  estudiante no llega a la capa de presentación, ni siquiera para descartarlo
+  allí.
+- **Los borradores responden 404**, igual que una dirección inexistente, para
+  que no se puedan descubrir probando direcciones.
+- **Las descargas requieren aprobación.** Ningún PDF se sirve desde un
+  almacenamiento público.
+- **Toda acción administrativa queda registrada** en una bitácora de auditoría
+  que no guarda datos personales de estudiantes.
+
+Los estudiantes que aparecen en los datos de ejemplo son inventados.
+
+## Requisitos
+
+- Node.js 22.22.2 o superior (hay un `.nvmrc`: basta con `nvm use`)
+- npm 12 o superior
+- PostgreSQL 16
+
+## Puesta en marcha
 
 ```bash
+npm install
+cp .env.example .env          # y completar DATABASE_URL
+createdb acervo_dev
+npx prisma migrate dev
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Para crear la primera cuenta de administrador:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+SEED_ADMIN_EMAIL="correo@ejemplo.com" npm run db:seed
+```
 
-## Learn More
+Si no se entrega `SEED_ADMIN_PASSWORD`, el script genera una contraseña segura
+y la muestra una sola vez.
 
-To learn more about Next.js, take a look at the following resources:
+Para cargar proyectos de ejemplo durante el desarrollo:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run db:ejemplos
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Tests
 
-## Deploy on Vercel
+Los tests de integración usan su propia base de datos y se niegan a ejecutarse
+contra cualquier otra.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+createdb acervo_test
+cp .env.example .env.test     # y apuntar DATABASE_URL a acervo_test
+npx prisma migrate deploy
+npm test
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Comandos
+
+| Comando | Qué hace |
+|---|---|
+| `npm run dev` | Servidor de desarrollo |
+| `npm run build` | Compilación de producción |
+| `npm run lint` | Revisión de estilo de código |
+| `npm run typecheck` | Verificación de tipos |
+| `npm test` | Tests unitarios y de integración |
+| `npm run db:seed` | Crea la cuenta de administrador |
+| `npm run db:ejemplos` | Carga proyectos de ejemplo (solo desarrollo) |
+
+Tras cambiar el esquema de la base de datos hay que reiniciar `npm run dev`:
+el cliente de Prisma queda en memoria y no se refresca solo.
+
+## Stack
+
+Next.js 16 (App Router) · TypeScript estricto · Tailwind CSS 4 · PostgreSQL 16
+con Prisma 7 · argon2id · Vitest
+
+Las decisiones de arquitectura relevantes se registran en [`docs/adr`](docs/adr).
