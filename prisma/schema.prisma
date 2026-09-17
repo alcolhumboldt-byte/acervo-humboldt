@@ -1,0 +1,101 @@
+// Esquema de datos de Acervo.
+// Módulo identity: personal del colegio, autenticación y auditoría.
+// No existen cuentas de estudiantes ni de familias (decisión cerrada n.º 3).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// Roles del personal. Solo estos dos.
+enum Role {
+  ADMIN
+  DOCENTE
+}
+
+/// Cuenta de un miembro del personal. La lista de usuarios es la única
+/// frontera de acceso al panel interno.
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime?
+  name          String
+  image         String?
+  passwordHash  String
+  role          Role      @default(DOCENTE)
+  isActive      Boolean   @default(true)
+
+  // Bloqueo por intentos fallidos de ingreso.
+  failedLoginAttempts Int       @default(0)
+  lockedUntil         DateTime?
+  lastLoginAt         DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  accounts            Account[]
+  passwordResetTokens PasswordResetToken[]
+  auditLogs           AuditLog[]
+
+  @@index([role])
+}
+
+/// Requerido por el adaptador de Auth.js.
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+/// Restablecimiento de contraseña. Se guarda solo el hash del token:
+/// el valor en claro viaja por correo y nunca toca la base de datos.
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  userId    String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// Registro de acciones administrativas. Nunca debe contener nombres
+/// completos ni correos de estudiantes.
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  action     String
+  entityType String
+  entityId   String?
+  metadata   Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([actorId])
+  @@index([createdAt])
+  @@index([entityType, entityId])
+}
