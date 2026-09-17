@@ -1,1 +1,38 @@
 @import "tailwindcss";
+
+/* Paleta institucional. Concepto «memoria por capas». */
+@theme {
+  --color-blanco: #ffffff;
+  --color-papel: #f3f2f5;
+  --color-gris: #d6d5db;
+  --color-gris-texto: #5c5a66;
+  --color-tinta: #1b1a21;
+  --color-azul: #3e5170;
+  --color-morado: #7f4ca5;
+  --color-morado-hondo: #4a2963;
+  --color-morado-claro: #c9aee0;
+
+  --font-titulo: var(--fuente-titulo), Georgia, serif;
+  --font-cuerpo: var(--fuente-cuerpo), system-ui, sans-serif;
+}
+
+body {
+  background-color: var(--color-papel);
+  color: var(--color-tinta);
+  font-family: var(--font-cuerpo);
+}
+
+/* El foco siempre visible: es requisito de accesibilidad, no un adorno. */
+:focus-visible {
+  outline: 3px solid var(--color-morado);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
