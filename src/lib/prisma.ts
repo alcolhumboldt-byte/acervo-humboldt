@@ -11,8 +11,23 @@ import { PrismaClient } from "@/generated/prisma/client";
  * compilación fallaría en un servidor que no la necesita todavía.
  */
 
+/**
+ * Lee una variable de entorno en el momento de la llamada.
+ *
+ * Escrito así a propósito: si el código dijera `process.env.DATABASE_URL`, el
+ * empaquetador puede sustituir esa expresión por su valor durante la
+ * compilación. Cuando la variable no está disponible en ese momento —porque la
+ * plataforma la oculta a la compilación, por ejemplo— quedaría grabada como
+ * vacía y el valor real de ejecución nunca se leería. Guardando primero
+ * `process.env` en una variable, la sustitución no es posible.
+ */
+function leerEntorno(nombre: string): string | undefined {
+  const entorno: Record<string, string | undefined> = process.env;
+  return entorno[nombre];
+}
+
 function crearCliente(): PrismaClient {
-  const connectionString = process.env.DATABASE_URL;
+  const connectionString = leerEntorno("DATABASE_URL");
 
   if (!connectionString) {
     throw new Error("Falta la variable de entorno DATABASE_URL.");
