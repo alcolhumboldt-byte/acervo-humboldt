@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/prisma";
-import { gradeLabel, listPublishedProjects } from "@/modules/discovery/projects";
+import {
+  gradeLabel,
+  getPublishedProject,
+  listPublishedProjects,
+} from "@/modules/discovery/projects";
 
 async function crearProyecto(
   slug: string,
@@ -108,5 +112,53 @@ describe("gradeLabel", () => {
 
   it("devuelve un texto neutro ante un grado fuera de rango", () => {
     expect(gradeLabel(42)).toBe("Sin grado");
+  });
+});
+
+describe("getPublishedProject", () => {
+  it("devuelve el proyecto publicado que corresponde al slug", async () => {
+    await crearProyecto("uno", "PUBLISHED", new Date());
+
+    const proyecto = await getPublishedProject("uno");
+
+    expect(proyecto?.title).toBe("Proyecto uno");
+  });
+
+  it("devuelve null cuando el slug no existe", async () => {
+    expect(await getPublishedProject("no-existe")).toBeNull();
+  });
+
+  it("devuelve null para un borrador, aunque el slug sea correcto", async () => {
+    await crearProyecto("borrador", "DRAFT", null);
+
+    expect(await getPublishedProject("borrador")).toBeNull();
+  });
+
+  it("devuelve null para un proyecto en revisión", async () => {
+    await crearProyecto("revision", "REVIEW", null);
+
+    expect(await getPublishedProject("revision")).toBeNull();
+  });
+
+  it("devuelve null para un proyecto archivado", async () => {
+    await crearProyecto("archivado", "ARCHIVED", new Date());
+
+    expect(await getPublishedProject("archivado")).toBeNull();
+  });
+
+  it("muestra los autores con el nombre reducido", async () => {
+    await crearProyecto("uno", "PUBLISHED", new Date());
+
+    const proyecto = await getPublishedProject("uno");
+
+    expect(proyecto?.authors).toEqual(["María R."]);
+  });
+
+  it("no expone el apellido completo", async () => {
+    await crearProyecto("uno", "PUBLISHED", new Date());
+
+    const proyecto = await getPublishedProject("uno");
+
+    expect(JSON.stringify(proyecto)).not.toContain("Rodríguez");
   });
 });

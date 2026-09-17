@@ -20,6 +20,23 @@ export interface PublicProject {
   authors: string[];
 }
 
+/** Campos que el portal puede mostrar. Nada más sale de la base. */
+const CAMPOS_PUBLICOS = {
+  slug: true,
+  title: true,
+  summary: true,
+  area: true,
+  gradeLevel: true,
+  year: true,
+  authors: {
+    select: {
+      givenNames: true,
+      familyNames: true,
+      fullNameAuthorized: true,
+    },
+  },
+} as const;
+
 const GRADE_NAMES = [
   "Preescolar",
   "Primero",
@@ -39,6 +56,17 @@ export function gradeLabel(level: number): string {
   return GRADE_NAMES[level] ?? "Sin grado";
 }
 
+type ProyectoConAutores = Omit<PublicProject, "authors"> & {
+  authors: Parameters<typeof displayAuthorName>[0][];
+};
+
+function toPublicProject(proyecto: ProyectoConAutores): PublicProject {
+  return {
+    ...proyecto,
+    authors: proyecto.authors.map(displayAuthorName),
+  };
+}
+
 export async function listPublishedProjects({
   limit,
 }: { limit?: number } = {}): Promise<PublicProject[]> {
@@ -46,25 +74,25 @@ export async function listPublishedProjects({
     where: { status: "PUBLISHED" },
     orderBy: { publishedAt: "desc" },
     take: limit,
-    select: {
-      slug: true,
-      title: true,
-      summary: true,
-      area: true,
-      gradeLevel: true,
-      year: true,
-      authors: {
-        select: {
-          givenNames: true,
-          familyNames: true,
-          fullNameAuthorized: true,
-        },
-      },
-    },
+    select: CAMPOS_PUBLICOS,
   });
 
-  return proyectos.map((proyecto) => ({
-    ...proyecto,
-    authors: proyecto.authors.map(displayAuthorName),
-  }));
+  return proyectos.map(toPublicProject);
+}
+
+/**
+ * Busca un proyecto por su slug.
+ *
+ * El filtro de estado va en la consulta, no después: un proyecto sin publicar
+ * no debe salir de la base ni siquiera para descartarlo en la página.
+ */
+export async function getPublishedProject(
+  slug: string,
+): Promise<PublicProject | null> {
+  const proyecto = await prisma.project.findFirst({
+    where: { slug, status: "PUBLISHED" },
+    select: CAMPOS_PUBLICOS,
+  });
+
+  return proyecto ? toPublicProject(proyecto) : null;
 }

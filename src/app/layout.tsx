@@ -16,7 +16,7 @@ const titulo = Source_Serif_4({
 });
 
 export const metadata: Metadata = {
-  title: "Acervo",
+  title: { default: "Acervo", template: "%s · Acervo" },
   description:
     "Repositorio de proyectos académicos y reconocimientos de estudiantes.",
 };

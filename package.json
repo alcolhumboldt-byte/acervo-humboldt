@@ -11,7 +11,7 @@
     "test:watch": "vitest",
     "postinstall": "prisma generate",
     "db:seed": "prisma db seed",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "db:ejemplos": "tsx prisma/seed-ejemplos.ts"
   },
   "dependencies": {

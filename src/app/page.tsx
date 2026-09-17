@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { AvisoNombres } from "@/components/aviso-nombres";
+import { SiteFooter } from "@/components/site-footer";
+import { SiteHeader } from "@/components/site-header";
 import { INSTITUCION } from "@/config/institucion";
 import { gradeLabel, listPublishedProjects } from "@/modules/discovery/projects";
 
@@ -16,15 +19,10 @@ export default async function Home() {
   const proyectos = await listPublishedProjects({ limit: 6 });
 
   return (
-    <div className="min-h-screen">
-      <header className="border-b border-gris bg-blanco">
-        <div className="mx-auto flex max-w-5xl items-baseline justify-between px-6 py-5">
-          <span className="font-titulo text-xl text-morado-hondo">Acervo</span>
-          <span className="text-sm text-gris-texto">{INSTITUCION.nombre}</span>
-        </div>
-      </header>
+    <div className="flex min-h-screen flex-col">
+      <SiteHeader />
 
-      <main>
+      <main className="flex-1">
         <section className="mx-auto max-w-5xl px-6 pt-16 pb-12">
           {/* Las tres capas aluden al concepto del archivo: cada año añade una. */}
           <div aria-hidden="true" className="mb-8 flex flex-col gap-1">
@@ -57,49 +55,40 @@ export default async function Home() {
           ) : (
             <ul className="mt-6 grid gap-5 sm:grid-cols-2">
               {proyectos.map((proyecto) => (
-                <li
-                  key={proyecto.slug}
-                  className="rounded-lg border border-gris border-l-4 border-l-morado bg-blanco p-6"
-                >
-                  <p className="text-sm text-gris-texto">
-                    {proyecto.area} · {gradeLabel(proyecto.gradeLevel)} ·{" "}
-                    {proyecto.year}
-                  </p>
+                <li key={proyecto.slug}>
+                  <Link
+                    href={`/proyectos/${proyecto.slug}`}
+                    className="block h-full rounded-lg border border-gris border-l-4 border-l-morado bg-blanco p-6 transition-colors hover:border-l-morado-hondo hover:bg-papel"
+                  >
+                    <p className="text-sm text-gris-texto">
+                      {proyecto.area} · {gradeLabel(proyecto.gradeLevel)} ·{" "}
+                      {proyecto.year}
+                    </p>
 
-                  <h3 className="mt-2 font-titulo text-xl leading-snug text-tinta">
-                    {proyecto.title}
-                  </h3>
+                    <h3 className="mt-2 font-titulo text-xl leading-snug text-tinta">
+                      {proyecto.title}
+                    </h3>
 
-                  <p className="mt-3 text-sm leading-relaxed text-gris-texto">
-                    {proyecto.summary}
-                  </p>
+                    <p className="mt-3 text-sm leading-relaxed text-gris-texto">
+                      {proyecto.summary}
+                    </p>
 
-                  <p className="mt-4 text-sm text-azul">
-                    {proyecto.authors.join(", ")}
-                  </p>
+                    <p className="mt-4 text-sm text-azul">
+                      {proyecto.authors.join(", ")}
+                    </p>
+                  </Link>
                 </li>
               ))}
             </ul>
           )}
 
-          <p className="mt-8 max-w-2xl text-sm leading-relaxed text-gris-texto">
-            Los autores son estudiantes menores de edad. Por eso sus nombres se
-            muestran reducidos, y el nombre completo solo aparece cuando la
-            familia ha firmado la autorización correspondiente.
-          </p>
+          <div className="mt-8">
+            <AvisoNombres />
+          </div>
         </section>
       </main>
 
-      <footer className="border-t border-gris bg-blanco">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 px-6 py-8 text-sm text-gris-texto">
-          <span>
-            {INSTITUCION.nombre} · {INSTITUCION.ciudad}
-          </span>
-          <Link href="/ingresar" className="text-morado-hondo underline">
-            Ingreso del personal
-          </Link>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }
