@@ -14,6 +14,13 @@
 
   --font-titulo: var(--fuente-titulo), Georgia, serif;
   --font-cuerpo: var(--fuente-cuerpo), system-ui, sans-serif;
+
+  --radius-pieza: 0.75rem;
+
+  /* Sombra teñida con el morado del fondo en vez de negro puro: una sombra
+     neutra sobre papel gris se ve sucia. */
+  --shadow-capa: 0 18px 40px -28px rgb(74 41 99 / 0.38);
+  --shadow-capa-alta: 0 24px 50px -26px rgb(74 41 99 / 0.45);
 }
 
 body {
@@ -28,11 +35,48 @@ body {
   outline-offset: 2px;
 }
 
+/* Entrada escalonada. Solo opacidad y desplazamiento, que el navegador
+   resuelve en la tarjeta gráfica; animar alto o posición provoca reflujo. */
+@keyframes aparecer {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.aparece {
+  animation: aparecer 0.45s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  animation-delay: calc(var(--indice, 0) * 60ms);
+}
+
+/* Brillo que recorre los bloques de carga. */
+@keyframes destello {
+  to {
+    background-position-x: -200%;
+  }
+}
+
+.destella {
+  background: linear-gradient(
+    100deg,
+    var(--color-gris) 20%,
+    color-mix(in srgb, var(--color-gris) 45%, var(--color-blanco)) 40%,
+    var(--color-gris) 60%
+  );
+  background-size: 200% 100%;
+  animation: destello 1.4s linear infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
 }

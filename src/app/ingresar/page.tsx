@@ -13,7 +13,7 @@ export default function Ingresar() {
       <div className="w-full max-w-md">
         <div className="mb-8">
           <p className="text-sm tracking-wide text-gris-texto">Acervo</p>
-          <h1 className="mt-1 font-titulo text-3xl text-tinta">
+          <h1 className="mt-1 font-titulo text-3xl tracking-tight text-tinta">
             Ingreso del personal
           </h1>
           <p className="mt-3 text-sm leading-relaxed text-gris-texto">
@@ -23,12 +23,12 @@ export default function Ingresar() {
 
         <form
           action={accion}
-          className="rounded-lg border border-gris bg-blanco p-6 shadow-sm"
+          className="rounded-pieza bg-blanco p-7 shadow-capa ring-1 ring-gris ring-inset"
         >
           {estado.error ? (
             <p
               role="alert"
-              className="mb-5 rounded-md border border-azul bg-papel px-4 py-3 text-sm text-azul"
+              className="mb-6 rounded-pieza border-l-[3px] border-azul bg-papel px-4 py-3 text-sm leading-relaxed text-azul"
             >
               {estado.error}
             </p>
@@ -37,7 +37,7 @@ export default function Ingresar() {
           {estado.ok ? (
             <p
               role="status"
-              className="mb-5 rounded-md border border-morado bg-papel px-4 py-3 text-sm text-morado-hondo"
+              className="mb-6 rounded-pieza border-l-[3px] border-morado bg-papel px-4 py-3 text-sm leading-relaxed text-morado-hondo"
             >
               Datos verificados correctamente.
             </p>
@@ -56,7 +56,7 @@ export default function Ingresar() {
               type="email"
               autoComplete="username"
               required
-              className="w-full rounded-md border border-gris bg-blanco px-3 py-2 text-tinta"
+              className="w-full rounded-pieza bg-blanco px-3.5 py-2.5 text-tinta ring-1 ring-gris ring-inset transition-shadow duration-200 focus:ring-morado"
             />
           </div>
 
@@ -73,14 +73,14 @@ export default function Ingresar() {
               type="password"
               autoComplete="current-password"
               required
-              className="w-full rounded-md border border-gris bg-blanco px-3 py-2 text-tinta"
+              className="w-full rounded-pieza bg-blanco px-3.5 py-2.5 text-tinta ring-1 ring-gris ring-inset transition-shadow duration-200 focus:ring-morado"
             />
           </div>
 
           <button
             type="submit"
             disabled={enviando}
-            className="w-full rounded-md bg-morado px-4 py-2.5 font-bold text-blanco transition-colors hover:bg-morado-hondo disabled:opacity-60"
+            className="w-full rounded-pieza bg-morado px-4 py-3 font-bold text-blanco transition-[background-color,transform] duration-200 hover:bg-morado-hondo active:scale-[0.98] disabled:opacity-60 disabled:active:scale-100"
           >
             {enviando ? "Verificando" : "Entrar"}
           </button>

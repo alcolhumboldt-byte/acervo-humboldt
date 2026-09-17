@@ -185,3 +185,32 @@ export async function getFilterOptions(): Promise<FilterOptions> {
     years: [...new Set(proyectos.map((p) => p.year))].sort((a, b) => b - a),
   };
 }
+
+export interface ArchiveStats {
+  projectCount: number;
+  areaCount: number;
+  firstYear: number | null;
+  lastYear: number | null;
+}
+
+/**
+ * Cifras del archivo para la portada.
+ *
+ * Son datos reales de la base, no adornos: si el archivo está vacío devuelven
+ * cero y la portada lo dice, en lugar de inventar un número.
+ */
+export async function getArchiveStats(): Promise<ArchiveStats> {
+  const proyectos = await prisma.project.findMany({
+    where: { status: "PUBLISHED" },
+    select: { area: true, year: true },
+  });
+
+  const years = proyectos.map((p) => p.year);
+
+  return {
+    projectCount: proyectos.length,
+    areaCount: new Set(proyectos.map((p) => p.area)).size,
+    firstYear: years.length === 0 ? null : Math.min(...years),
+    lastYear: years.length === 0 ? null : Math.max(...years),
+  };
+}

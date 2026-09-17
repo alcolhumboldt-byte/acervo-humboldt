@@ -35,7 +35,7 @@ export default async function ProyectoDetalle({
 
       <main className="flex-1">
         <article className="mx-auto max-w-3xl px-6 pt-12 pb-16">
-          <Link href="/" className="text-sm text-morado-hondo underline">
+          <Link href="/" className="text-sm text-morado-hondo underline underline-offset-4">
             Volver al inicio
           </Link>
 
@@ -43,7 +43,7 @@ export default async function ProyectoDetalle({
             {proyecto.area} · {gradeLabel(proyecto.gradeLevel)} · {proyecto.year}
           </p>
 
-          <h1 className="mt-2 font-titulo text-4xl leading-tight text-tinta">
+          <h1 className="mt-2 font-titulo text-4xl leading-[1.08] tracking-tight text-tinta">
             {proyecto.title}
           </h1>
 
@@ -55,11 +55,11 @@ export default async function ProyectoDetalle({
             </p>
           </div>
 
-          <div className="mt-12 rounded-lg border border-gris bg-blanco p-6">
-            <h2 className="font-titulo text-lg text-tinta">
+          <div className="mt-14 border-t border-gris pt-8">
+            <h2 className="font-titulo text-lg tracking-tight text-tinta">
               Documento del proyecto
             </h2>
-            <p className="mt-2 text-sm leading-relaxed text-gris-texto">
+            <p className="mt-2 max-w-[60ch] text-sm leading-relaxed text-gris-texto">
               La consulta del documento completo se solicita al colegio y
               requiere aprobación. Esa función todavía no está disponible.
             </p>
