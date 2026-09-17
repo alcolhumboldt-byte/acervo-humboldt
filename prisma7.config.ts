@@ -10,6 +10,9 @@ export default defineConfig({
     seed: "tsx prisma/seed.ts",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    // Las migraciones usan conexión directa cuando existe. El agrupador de
+    // conexiones de Supabase trabaja por transacción y no admite todo el
+    // lenguaje de definición de esquema que necesita una migración.
+    url: process.env["DIRECT_DATABASE_URL"] ?? process.env["DATABASE_URL"],
   },
 });
