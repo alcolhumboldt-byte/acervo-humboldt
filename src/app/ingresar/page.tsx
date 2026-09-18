@@ -34,15 +34,6 @@ export default function Ingresar() {
             </p>
           ) : null}
 
-          {estado.ok ? (
-            <p
-              role="status"
-              className="mb-6 rounded-pieza border-l-[3px] border-morado bg-papel px-4 py-3 text-sm leading-relaxed text-morado-hondo"
-            >
-              Datos verificados correctamente.
-            </p>
-          ) : null}
-
           <div className="mb-5">
             <label
               htmlFor="email"
