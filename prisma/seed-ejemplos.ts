@@ -3,16 +3,41 @@ import { prisma } from "../src/lib/prisma";
 import { buildSearchText } from "../src/modules/discovery/search-text";
 
 /**
- * Datos de ejemplo para desarrollo.
+ * Datos de ejemplo.
  *
  * Los estudiantes son inventados. Sirven para ver la interfaz con contenido
  * real en lugar de maquetas, y para comprobar que el filtro por estado
  * funciona: hay un proyecto en borrador que no debe aparecer en el portal.
+ *
+ * Con `--borrar` los elimina en lugar de crearlos.
  */
 
-if (process.env.NODE_ENV === "production") {
+const BORRAR = process.argv.includes("--borrar");
+
+/**
+ * Mira a qué base de datos se va a escribir, no en qué entorno se ejecuta.
+ *
+ * La comprobación anterior miraba NODE_ENV, que describe la máquina donde
+ * corre el script y no su destino: lanzado desde un portátil contra la base
+ * de producción, la daba por buena. Lo que importa es dónde caen los datos.
+ */
+function esBaseLocal(url: string): boolean {
+  try {
+    const host = new URL(url).hostname;
+    return host === "localhost" || host === "127.0.0.1" || host === "::1";
+  } catch {
+    return false;
+  }
+}
+
+const destinoRemoto = !esBaseLocal(process.env.DATABASE_URL ?? "");
+
+if (destinoRemoto && process.env.PERMITIR_EJEMPLOS_REMOTOS !== "si") {
   throw new Error(
-    "Los datos de ejemplo no pueden cargarse en producción.",
+    "Esta base de datos no es local y estos proyectos son inventados.\n" +
+      "Publicarlos en un sitio del colegio puede hacer creer que son trabajos\n" +
+      "reales de sus estudiantes. Si aun así quieres cargarlos, repite el\n" +
+      "comando añadiendo PERMITIR_EJEMPLOS_REMOTOS=si",
   );
 }
 
@@ -92,6 +117,15 @@ const EJEMPLOS = [
 ];
 
 async function main(): Promise<void> {
+  if (BORRAR) {
+    const { count } = await prisma.project.deleteMany({
+      where: { slug: { in: EJEMPLOS.map((e) => e.slug) } },
+    });
+
+    console.log(`Proyectos de ejemplo eliminados: ${count}.`);
+    return;
+  }
+
   for (const ejemplo of EJEMPLOS) {
     const { authors, status, ...datos } = ejemplo;
 
@@ -121,6 +155,14 @@ async function main(): Promise<void> {
   console.log(
     `Datos de ejemplo listos: ${EJEMPLOS.length} proyectos, ${publicados} publicados.`,
   );
+
+  if (destinoRemoto) {
+    console.log(
+      "\nRecuerda: son estudiantes inventados. Bórralos con\n" +
+        "  npm run db:ejemplos:borrar\n" +
+        "antes de que el colegio empiece a usar el sitio.",
+    );
+  }
 }
 
 main()

@@ -12,7 +12,8 @@
     "postinstall": "prisma generate",
     "db:seed": "prisma db seed",
     "typecheck": "next typegen && tsc --noEmit",
-    "db:ejemplos": "tsx prisma/seed-ejemplos.ts"
+    "db:ejemplos": "tsx prisma/seed-ejemplos.ts",
+    "db:ejemplos:borrar": "tsx prisma/seed-ejemplos.ts --borrar"
   },
   "dependencies": {
     "@node-rs/argon2": "^2.2.1",
