@@ -3,6 +3,7 @@ import { AvisoNombres } from "@/components/aviso-nombres";
 import { ProjectCard } from "@/components/project-card";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import { TutorialVideo } from "@/components/tutorial-video";
 import { INSTITUCION } from "@/config/institucion";
 import { getArchiveStats, listPublishedProjects } from "@/modules/discovery/projects";
 
@@ -97,6 +98,8 @@ export default async function Home() {
             </div>
           </div>
         </section>
+
+        <TutorialVideo />
 
         <section className="mx-auto max-w-6xl px-6 pb-24">
           <div className="flex flex-wrap items-baseline justify-between gap-4 border-t border-gris pt-8">
