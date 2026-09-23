@@ -321,6 +321,9 @@ export async function getProjectForPanel(id: string) {
       gradeLevel: true,
       year: true,
       status: true,
+      documentPath: true,
+      documentSize: true,
+      documentUploadedAt: true,
       authors: {
         select: {
           givenNames: true,

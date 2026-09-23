@@ -134,6 +134,15 @@ model Project {
   /// «Geometría». Se recalcula cada vez que se guarda el proyecto.
   searchText String @default("")
 
+  /// Ruta del PDF dentro del almacenamiento privado.
+  ///
+  /// El nombre lo genera el sistema; el original del archivo se descarta a
+  /// propósito, porque un PDF llamado «proyecto-maria-rodriguez.pdf» filtraría
+  /// el nombre completo de una estudiante sin que nadie lo advirtiera.
+  documentPath       String?
+  documentSize       Int?
+  documentUploadedAt DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

@@ -5,6 +5,13 @@ import { redirect } from "next/navigation";
 import type { ProjectStatus } from "@/generated/prisma/enums";
 import { auth } from "@/auth";
 import {
+  confirmUpload,
+  prepareUpload,
+  removeDocument,
+} from "@/modules/catalog/attach-document";
+import { DOCUMENT_MESSAGES } from "@/modules/catalog/document";
+import { supabaseStorage } from "@/modules/catalog/supabase-storage";
+import {
   createProject,
   changeStatus,
   updateProject,
@@ -144,4 +151,89 @@ export async function cambiarEstado(
   revalidatePath("/");
   revalidatePath("/proyectos");
   return {};
+}
+
+export type ResultadoDocumento =
+  | { ok: true }
+  | { ok: false; error: string };
+
+const MOTIVOS_DOCUMENTO: Record<string, string> = {
+  NOT_FOUND: "No encontramos ese proyecto.",
+  WRONG_PATH: "La ruta del archivo no corresponde a este proyecto.",
+  MISSING_FILE: "El archivo no llegó a subirse. Inténtalo de nuevo.",
+};
+
+/** Primer paso: el servidor concede permiso para escribir en una ruta suya. */
+export async function prepararDocumento(
+  projectId: string,
+): Promise<
+  { ok: true; path: string; url: string } | { ok: false; error: string }
+> {
+  await actorActual();
+
+  try {
+    const r = await prepareUpload(projectId, supabaseStorage);
+
+    return r.ok
+      ? { ok: true, path: r.path, url: r.url }
+      : { ok: false, error: MOTIVOS_DOCUMENTO[r.reason] ?? "No se pudo." };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "No se pudo preparar.",
+    };
+  }
+}
+
+/** Segundo paso: el servidor descarga lo subido y lo comprueba antes de
+ *  darlo por bueno. */
+export async function confirmarDocumento(
+  projectId: string,
+  path: string,
+): Promise<ResultadoDocumento> {
+  const actor = await actorActual();
+
+  try {
+    const r = await confirmUpload(projectId, path, actor, supabaseStorage);
+
+    if (r.ok) {
+      revalidatePath(`/panel/proyectos/${projectId}`);
+      return { ok: true };
+    }
+
+    return {
+      ok: false,
+      error:
+        "reasons" in r
+          ? r.reasons.map((m) => DOCUMENT_MESSAGES[m]).join(" ")
+          : (MOTIVOS_DOCUMENTO[r.reason] ?? "No se pudo."),
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "No se pudo confirmar.",
+    };
+  }
+}
+
+export async function quitarDocumento(
+  projectId: string,
+): Promise<ResultadoDocumento> {
+  const actor = await actorActual();
+
+  try {
+    const r = await removeDocument(projectId, actor, supabaseStorage);
+
+    if (r.ok) {
+      revalidatePath(`/panel/proyectos/${projectId}`);
+      return { ok: true };
+    }
+
+    return { ok: false, error: MOTIVOS_DOCUMENTO[r.reason] ?? "No se pudo." };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "No se pudo quitar.",
+    };
+  }
 }

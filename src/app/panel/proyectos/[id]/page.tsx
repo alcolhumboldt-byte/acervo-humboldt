@@ -8,6 +8,7 @@ import {
   allowedTransitions,
   getProjectForPanel,
 } from "@/modules/catalog/projects";
+import { DocumentUpload } from "../document-upload";
 import { actualizarProyecto } from "../actions";
 import { ProjectForm } from "../project-form";
 import { StatusActions } from "../status-actions";
@@ -75,6 +76,24 @@ export default async function EditarProyecto({
           </p>
 
           <StatusActions id={proyecto.id} permitidos={permitidos} />
+        </section>
+
+        <section className="mt-12 border-t border-gris pt-8">
+          <h2 className="font-titulo text-xl tracking-tight text-tinta">
+            Documento del proyecto
+          </h2>
+          <p className="mt-2 mb-5 max-w-[60ch] text-sm leading-relaxed text-gris-texto">
+            El PDF se guarda en un almacenamiento privado. Nunca se publica una
+            dirección directa: se entrega por solicitud aprobada.
+          </p>
+
+          <DocumentUpload
+            projectId={proyecto.id}
+            documento={{
+              size: proyecto.documentSize,
+              uploadedAt: proyecto.documentUploadedAt,
+            }}
+          />
         </section>
 
         <section className="mt-12 border-t border-gris pt-8">
