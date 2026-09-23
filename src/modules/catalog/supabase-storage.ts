@@ -32,7 +32,12 @@ function cliente() {
     );
   }
 
-  return createClient(url, clave, { auth: { persistSession: false } });
+  // Se queda solo con el origen. El panel de Supabase muestra la dirección
+  // con «/rest/v1/» al final en algunas pantallas, y copiarla tal cual deja
+  // la aplicación apuntando a un sitio que no existe.
+  return createClient(new URL(url).origin, clave, {
+    auth: { persistSession: false },
+  });
 }
 
 export const supabaseStorage: DocumentStorage = {
