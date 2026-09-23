@@ -1,3 +1,7 @@
+// Hace fallar la compilación, con un mensaje claro, si algún componente de
+// navegador importa este archivo aunque sea de rebote. Sin esto, el
+// controlador de PostgreSQL se cuela en el paquete que descarga el visitante.
+import "server-only";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
 

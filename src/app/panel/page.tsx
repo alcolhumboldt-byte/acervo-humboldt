@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { auth } from "@/auth";
+import { PanelHeader } from "@/components/panel-header";
 import { INSTITUCION } from "@/config/institucion";
-import { salir } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -25,25 +26,7 @@ export default async function Panel() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="border-b border-gris bg-blanco">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-5">
-          <div>
-            <span className="font-titulo text-xl text-morado-hondo">
-              Acervo
-            </span>
-            <span className="ml-3 text-sm text-gris-texto">Panel interno</span>
-          </div>
-
-          <form action={salir}>
-            <button
-              type="submit"
-              className="rounded-pieza px-4 py-2 text-sm font-bold text-morado-hondo underline underline-offset-4 transition-transform duration-200 active:scale-[0.98]"
-            >
-              Cerrar sesión
-            </button>
-          </form>
-        </div>
-      </header>
+      <PanelHeader />
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-6 pt-14 pb-24">
         <p className="text-sm text-gris-texto">
@@ -57,22 +40,30 @@ export default async function Panel() {
 
         <div className="mt-10 border-t border-gris pt-8">
           <h2 className="font-titulo text-xl tracking-tight text-tinta">
+            Proyectos
+          </h2>
+          <p className="mt-3 max-w-[60ch] leading-relaxed text-gris-texto">
+            Crea proyectos, edítalos y envíalos a revisión. Un administrador
+            aprueba antes de que salgan al portal público.
+          </p>
+          <Link
+            href="/panel/proyectos"
+            className="mt-6 inline-block rounded-pieza bg-morado px-6 py-3 font-bold text-blanco transition-[background-color,transform] duration-200 hover:bg-morado-hondo active:scale-[0.98]"
+          >
+            Ver proyectos
+          </Link>
+        </div>
+
+        <div className="mt-12 border-t border-gris pt-8">
+          <h2 className="font-titulo text-xl tracking-tight text-tinta">
             Todavía en construcción
           </h2>
-
-          <p className="mt-3 max-w-[60ch] leading-relaxed text-gris-texto">
-            Desde aquí se cargarán los proyectos y reconocimientos, se
-            aprobarán las publicaciones y se atenderán las solicitudes de
-            documentos. Nada de eso está construido aún.
-          </p>
-
-          <ul className="mt-6 max-w-[60ch] divide-y divide-gris border-t border-gris">
+          <ul className="mt-5 max-w-[60ch] divide-y divide-gris border-t border-gris">
             {[
-              "Crear y editar proyectos",
               "Cargar el documento PDF de cada proyecto",
-              "Aprobar publicaciones antes de que salgan al portal",
-              "Marcar la autorización firmada de cada familia",
+              "Reconocimientos de estudiantes",
               "Atender solicitudes de descarga",
+              "Cambiar la contraseña desde el panel",
             ].map((tarea) => (
               <li
                 key={tarea}

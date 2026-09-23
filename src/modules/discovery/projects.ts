@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { displayAuthorName } from "@/modules/discovery/author-name";
 import { normalizeForSearch } from "@/modules/discovery/search-text";
 
+export { gradeLabel } from "@/modules/discovery/grades";
+
 /**
  * Consultas del portal público.
  *
@@ -38,25 +40,6 @@ const CAMPOS_PUBLICOS = {
     },
   },
 } as const;
-
-const GRADE_NAMES = [
-  "Preescolar",
-  "Primero",
-  "Segundo",
-  "Tercero",
-  "Cuarto",
-  "Quinto",
-  "Sexto",
-  "Séptimo",
-  "Octavo",
-  "Noveno",
-  "Décimo",
-  "Once",
-];
-
-export function gradeLabel(level: number): string {
-  return GRADE_NAMES[level] ?? "Sin grado";
-}
 
 type ProyectoConAutores = Omit<PublicProject, "authors"> & {
   authors: Parameters<typeof displayAuthorName>[0][];
