@@ -76,6 +76,24 @@ npx prisma migrate deploy
 npm test
 ```
 
+## Desplegar cambios
+
+Cada `git push` a `main` despliega el código solo. **La base de datos no se
+actualiza sola.**
+
+Si el cambio incluye una migración —cualquier cosa que toque
+`prisma/schema.prisma`— hay que aplicarla a producción aparte:
+
+```bash
+npm run db:produccion
+```
+
+Pide la cadena del *Session pooler* de Supabase y aplica lo que falte. Es
+seguro ejecutarlo siempre: si no hay nada pendiente, lo dice y no hace nada.
+
+Olvidarlo no rompe el sitio entero, y eso lo hace más traicionero: solo fallan
+las páginas que usan las columnas nuevas, mientras el resto sigue funcionando.
+
 ## Comandos
 
 | Comando | Qué hace |
@@ -87,6 +105,9 @@ npm test
 | `npm test` | Tests unitarios y de integración |
 | `npm run db:seed` | Crea la cuenta de administrador |
 | `npm run db:ejemplos` | Carga proyectos de ejemplo (solo desarrollo) |
+| `npm run db:ejemplos:borrar` | Quita esos proyectos de ejemplo |
+| `npm run db:produccion` | Aplica a producción las migraciones pendientes |
+| `npm run verificar:almacenamiento` | Comprueba que Supabase Storage responde |
 
 Tras cambiar el esquema de la base de datos hay que reiniciar `npm run dev`:
 el cliente de Prisma queda en memoria y no se refresca solo.

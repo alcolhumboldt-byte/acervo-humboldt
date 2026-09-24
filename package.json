@@ -14,7 +14,8 @@
     "typecheck": "next typegen && tsc --noEmit",
     "db:ejemplos": "tsx prisma/seed-ejemplos.ts",
     "db:ejemplos:borrar": "tsx prisma/seed-ejemplos.ts --borrar",
-    "verificar:almacenamiento": "NODE_OPTIONS=--conditions=react-server tsx scripts/verificar-almacenamiento.ts"
+    "verificar:almacenamiento": "NODE_OPTIONS=--conditions=react-server tsx scripts/verificar-almacenamiento.ts",
+    "db:produccion": "bash scripts/migrar-produccion.sh"
   },
   "dependencies": {
     "@node-rs/argon2": "^2.2.1",
