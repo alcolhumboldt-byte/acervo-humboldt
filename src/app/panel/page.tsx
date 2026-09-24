@@ -43,9 +43,29 @@ export default async function Panel() {
             Proyectos
           </h2>
           <p className="mt-3 max-w-[60ch] leading-relaxed text-gris-texto">
-            Crea proyectos, edítalos y envíalos a revisión. Un administrador
-            aprueba antes de que salgan al portal público.
+            Desde ahí se hace todo el trabajo sobre un proyecto. El PDF y el
+            estado de publicación se manejan dentro de cada uno, no desde esta
+            página.
           </p>
+
+          <ul className="mt-5 max-w-[60ch] divide-y divide-gris border-t border-gris">
+            {[
+              "Crear y editar proyectos, con sus autores",
+              "Marcar la autorización firmada de cada familia",
+              "Cargar o reemplazar el documento PDF",
+              "Enviar a revisión, publicar y archivar",
+            ].map((cosa) => (
+              <li
+                key={cosa}
+                className="flex items-baseline gap-3 py-3 text-gris-texto"
+              >
+                <span aria-hidden="true" className="text-morado">
+                  ·
+                </span>
+                {cosa}
+              </li>
+            ))}
+          </ul>
           <Link
             href="/panel/proyectos"
             className="mt-6 inline-block rounded-pieza bg-morado px-6 py-3 font-bold text-blanco transition-[background-color,transform] duration-200 hover:bg-morado-hondo active:scale-[0.98]"
@@ -60,7 +80,6 @@ export default async function Panel() {
           </h2>
           <ul className="mt-5 max-w-[60ch] divide-y divide-gris border-t border-gris">
             {[
-              "Cargar el documento PDF de cada proyecto",
               "Reconocimientos de estudiantes",
               "Atender solicitudes de descarga",
               "Cambiar la contraseña desde el panel",
