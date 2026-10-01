@@ -75,6 +75,32 @@ export const supabaseStorage: DocumentStorage = {
     return new Uint8Array(await data.arrayBuffer());
   },
 
+  async replace(path, bytes) {
+    const { error } = await cliente()
+      .storage.from(BUCKET_DOCUMENTOS)
+      .upload(path, bytes, { contentType: "application/pdf", upsert: true });
+
+    if (error) {
+      throw new Error(`No se pudo reemplazar el documento: ${error.message}`);
+    }
+  },
+
+  /** Enlace de lectura que caduca solo. El depósito sigue siendo privado:
+   *  sin este enlace, la ruta no sirve de nada. */
+  async createSignedUrl(path, segundos) {
+    const { data, error } = await cliente()
+      .storage.from(BUCKET_DOCUMENTOS)
+      .createSignedUrl(path, segundos);
+
+    if (error || !data) {
+      throw new Error(
+        `No se pudo generar el enlace: ${error?.message ?? "sin detalle"}`,
+      );
+    }
+
+    return data.signedUrl;
+  },
+
   async remove(path) {
     const { error } = await cliente()
       .storage.from(BUCKET_DOCUMENTOS)

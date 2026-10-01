@@ -1,7 +1,9 @@
+import { PDFDocument } from "pdf-lib";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/prisma";
 import {
   confirmUpload,
+  documentViewUrl,
   prepareUpload,
   removeDocument,
   type DocumentStorage,
@@ -23,6 +25,12 @@ function almacenFalso() {
       if (!contenido) throw new Error("no existe");
       return contenido;
     },
+    async replace(path, bytes) {
+      archivos.set(path, bytes);
+    },
+    async createSignedUrl(path, segundos) {
+      return `https://falso.test/${path}?caduca=${segundos}`;
+    },
     async remove(path) {
       archivos.delete(path);
       borrados.push(path);
@@ -32,7 +40,17 @@ function almacenFalso() {
   return { storage, archivos, borrados };
 }
 
-function pdf(relleno = 50): Uint8Array {
+/** PDF real: desde que se estampa la marca de agua, el servicio lo abre de
+ *  verdad y una cabecera suelta ya no sirve como prueba. */
+async function pdf(paginas = 1): Promise<Uint8Array> {
+  const doc = await PDFDocument.create();
+  for (let i = 0; i < paginas; i += 1) doc.addPage([595, 842]);
+  return doc.save();
+}
+
+/** Cabecera de PDF sin documento detrás: pasa la validación de formato pero
+ *  no se puede abrir para marcarlo. */
+function pdfRoto(relleno = 50): Uint8Array {
   const cabecera = new TextEncoder().encode("%PDF-1.7\n");
   const salida = new Uint8Array(cabecera.length + relleno);
   salida.set(cabecera);
@@ -105,14 +123,14 @@ describe("confirmUpload", () => {
     const { storage, archivos } = almacenFalso();
     const preparado = await prepareUpload(id, storage);
     if (!preparado.ok) throw new Error("no preparó");
-    archivos.set(preparado.path, pdf(50));
+    archivos.set(preparado.path, await pdf());
 
     const r = await confirmUpload(id, preparado.path, actor, storage);
 
     expect(r.ok).toBe(true);
     const p = await prisma.project.findUnique({ where: { id } });
     expect(p?.documentPath).toBe(preparado.path);
-    expect(p?.documentSize).toBe(59);
+    expect(p?.documentSize).toBeGreaterThan(0);
     expect(p?.documentUploadedAt).not.toBeNull();
   });
 
@@ -124,7 +142,7 @@ describe("confirmUpload", () => {
     const { storage, archivos } = almacenFalso();
     const ajeno = await prepareUpload(segundo.id, storage);
     if (!ajeno.ok) throw new Error("no preparó");
-    archivos.set(ajeno.path, pdf());
+    archivos.set(ajeno.path, await pdf());
 
     const r = await confirmUpload(primero.id, ajeno.path, primero.actor, storage);
 
@@ -171,7 +189,7 @@ describe("confirmUpload", () => {
     const { storage, archivos } = almacenFalso();
     const preparado = await prepareUpload(id, storage);
     if (!preparado.ok) throw new Error("no preparó");
-    archivos.set(preparado.path, pdf(MAX_DOCUMENT_BYTES));
+    archivos.set(preparado.path, pdfRoto(MAX_DOCUMENT_BYTES));
 
     const r = await confirmUpload(id, preparado.path, actor, storage);
 
@@ -185,12 +203,12 @@ describe("confirmUpload", () => {
 
     const primera = await prepareUpload(id, storage);
     if (!primera.ok) throw new Error("no preparó");
-    archivos.set(primera.path, pdf(10));
+    archivos.set(primera.path, await pdf(1));
     await confirmUpload(id, primera.path, actor, storage);
 
     const segunda = await prepareUpload(id, storage);
     if (!segunda.ok) throw new Error("no preparó");
-    archivos.set(segunda.path, pdf(20));
+    archivos.set(segunda.path, await pdf(2));
     await confirmUpload(id, segunda.path, actor, storage);
 
     expect(borrados).toContain(primera.path);
@@ -203,7 +221,7 @@ describe("confirmUpload", () => {
     const { storage, archivos } = almacenFalso();
     const preparado = await prepareUpload(id, storage);
     if (!preparado.ok) throw new Error("no preparó");
-    archivos.set(preparado.path, pdf());
+    archivos.set(preparado.path, await pdf());
 
     await confirmUpload(id, preparado.path, actor, storage);
 
@@ -220,7 +238,7 @@ describe("removeDocument", () => {
     const { storage, archivos } = almacenFalso();
     const preparado = await prepareUpload(id, storage);
     if (!preparado.ok) throw new Error("no preparó");
-    archivos.set(preparado.path, pdf());
+    archivos.set(preparado.path, await pdf());
     await confirmUpload(id, preparado.path, actor, storage);
 
     const r = await removeDocument(id, actor, storage);
@@ -237,5 +255,87 @@ describe("removeDocument", () => {
     const { storage } = almacenFalso();
 
     expect((await removeDocument(id, actor, storage)).ok).toBe(true);
+  });
+});
+
+describe("marca de agua al confirmar", () => {
+  it("lo guardado no es el archivo que subió el navegador", async () => {
+    const { actor, id } = await crearActorYProyecto();
+    const { storage, archivos } = almacenFalso();
+    const preparado = await prepareUpload(id, storage);
+    if (!preparado.ok) throw new Error("no preparó");
+    const subido = await pdf();
+    archivos.set(preparado.path, subido);
+
+    await confirmUpload(id, preparado.path, actor, storage);
+
+    expect(archivos.get(preparado.path)).not.toEqual(subido);
+  });
+
+  it("lo guardado sigue siendo un PDF con las mismas páginas", async () => {
+    const { actor, id } = await crearActorYProyecto();
+    const { storage, archivos } = almacenFalso();
+    const preparado = await prepareUpload(id, storage);
+    if (!preparado.ok) throw new Error("no preparó");
+    archivos.set(preparado.path, await pdf(3));
+
+    await confirmUpload(id, preparado.path, actor, storage);
+
+    const guardado = await PDFDocument.load(archivos.get(preparado.path)!);
+    expect(guardado.getPageCount()).toBe(3);
+  });
+
+  it("el tamaño registrado es el del archivo ya marcado", async () => {
+    const { actor, id } = await crearActorYProyecto();
+    const { storage, archivos } = almacenFalso();
+    const preparado = await prepareUpload(id, storage);
+    if (!preparado.ok) throw new Error("no preparó");
+    archivos.set(preparado.path, await pdf());
+
+    await confirmUpload(id, preparado.path, actor, storage);
+
+    const p = await prisma.project.findUnique({ where: { id } });
+    expect(p?.documentSize).toBe(archivos.get(preparado.path)?.length);
+  });
+
+  it("rechaza y retira un PDF que no se puede abrir para marcarlo", async () => {
+    const { actor, id } = await crearActorYProyecto();
+    const { storage, archivos, borrados } = almacenFalso();
+    const preparado = await prepareUpload(id, storage);
+    if (!preparado.ok) throw new Error("no preparó");
+    archivos.set(preparado.path, pdfRoto());
+
+    const r = await confirmUpload(id, preparado.path, actor, storage);
+
+    expect(r).toEqual({ ok: false, reason: "CANNOT_WATERMARK" });
+    expect(borrados).toContain(preparado.path);
+    const p = await prisma.project.findUnique({ where: { id } });
+    expect(p?.documentPath).toBeNull();
+  });
+});
+
+describe("documentViewUrl", () => {
+  it("da un enlace temporal cuando hay documento", async () => {
+    const { actor, id } = await crearActorYProyecto();
+    const { storage, archivos } = almacenFalso();
+    const preparado = await prepareUpload(id, storage);
+    if (!preparado.ok) throw new Error("no preparó");
+    archivos.set(preparado.path, await pdf());
+    await confirmUpload(id, preparado.path, actor, storage);
+
+    const r = await documentViewUrl(id, storage);
+
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.url).toContain(preparado.path);
+  });
+
+  it("responde NOT_FOUND si el proyecto no tiene documento", async () => {
+    const { id } = await crearActorYProyecto();
+    const { storage } = almacenFalso();
+
+    expect(await documentViewUrl(id, storage)).toEqual({
+      ok: false,
+      reason: "NOT_FOUND",
+    });
   });
 });

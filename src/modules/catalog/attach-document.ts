@@ -6,6 +6,8 @@ import {
   type DocumentIssue,
 } from "@/modules/catalog/document";
 import type { Actor } from "@/modules/catalog/projects";
+import { applyWatermark } from "@/modules/catalog/watermark";
+import { INSTITUCION } from "@/config/institucion";
 
 /**
  * Adjuntar y quitar el PDF de un proyecto.
@@ -26,6 +28,10 @@ export interface DocumentStorage {
   /** Permiso temporal para escribir en esa ruta. */
   createUploadUrl(path: string): Promise<{ url: string; token: string }>;
   download(path: string): Promise<Uint8Array>;
+  /** Sobrescribe lo que haya en esa ruta. */
+  replace(path: string, bytes: Uint8Array): Promise<void>;
+  /** Enlace de lectura que caduca solo. Nunca se guarda ni se publica. */
+  createSignedUrl(path: string, segundos: number): Promise<string>;
   remove(path: string): Promise<void>;
 }
 
@@ -35,8 +41,14 @@ export type PrepareResult =
 
 export type ConfirmResult =
   | { ok: true }
-  | { ok: false; reason: "NOT_FOUND" | "WRONG_PATH" | "MISSING_FILE" }
+  | {
+      ok: false;
+      reason: "NOT_FOUND" | "WRONG_PATH" | "MISSING_FILE" | "CANNOT_WATERMARK";
+    }
   | { ok: false; reasons: DocumentIssue[] };
+
+/** Lo que queda estampado en cada página de cada documento guardado. */
+export const TEXTO_MARCA = `${INSTITUCION.nombre} · uso restringido`;
 
 /** La ruta la construye el servidor; al confirmar se comprueba que la que
  *  devuelve el navegador sea de ese proyecto y no de otro. */
@@ -115,11 +127,25 @@ export async function confirmUpload(
     return { ok: false, reasons: validacion.reasons };
   }
 
+  // Se marca antes de darlo por bueno, de modo que no exista en el
+  // almacenamiento ni un instante una copia sin marcar que alguien pudiera
+  // llegar a entregar.
+  let marcado: Uint8Array;
+
+  try {
+    marcado = await applyWatermark(bytes, TEXTO_MARCA);
+  } catch {
+    await storage.remove(path);
+    return { ok: false, reason: "CANNOT_WATERMARK" };
+  }
+
+  await storage.replace(path, marcado);
+
   await prisma.project.update({
     where: { id: projectId },
     data: {
       documentPath: path,
-      documentSize: bytes.length,
+      documentSize: marcado.length,
       documentUploadedAt: new Date(),
     },
   });
@@ -135,6 +161,34 @@ export async function confirmUpload(
   });
 
   return { ok: true };
+}
+
+/**
+ * Enlace temporal para que el personal vea el documento desde el panel.
+ *
+ * Caduca solo y no se guarda en ninguna parte: cada vez que alguien quiere
+ * mirarlo se pide uno nuevo. Esto es para el panel, no para el público: la
+ * entrega al público pasa por solicitud aprobada.
+ */
+export const SEGUNDOS_DE_VISTA = 120;
+
+export async function documentViewUrl(
+  projectId: string,
+  storage: DocumentStorage,
+): Promise<{ ok: true; url: string } | { ok: false; reason: "NOT_FOUND" }> {
+  const proyecto = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { documentPath: true },
+  });
+
+  if (!proyecto?.documentPath) {
+    return { ok: false, reason: "NOT_FOUND" };
+  }
+
+  return {
+    ok: true,
+    url: await storage.createSignedUrl(proyecto.documentPath, SEGUNDOS_DE_VISTA),
+  };
 }
 
 export async function removeDocument(

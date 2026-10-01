@@ -7,6 +7,7 @@ import {
   confirmarDocumento,
   prepararDocumento,
   quitarDocumento,
+  verDocumento,
 } from "./actions";
 
 interface Props {
@@ -24,6 +25,8 @@ export function DocumentUpload({ projectId, documento }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [subiendo, setSubiendo] = useState(false);
   const [quitando, iniciarQuitar] = useTransition();
+  const [abriendo, iniciarAbrir] = useTransition();
+  const [vista, setVista] = useState<string | null>(null);
 
   async function subir(archivo: File) {
     setError(null);
@@ -92,14 +95,32 @@ export function DocumentUpload({ projectId, documento }: Props) {
               documento.uploadedAt,
             )}
           </p>
-          <p className="mt-3 text-sm leading-relaxed text-gris-texto">
-            No se puede abrir desde aquí: los documentos solo se entregan por
-            solicitud aprobada, y esa parte aún no está construida.
+          <p className="mt-3 max-w-[60ch] text-sm leading-relaxed text-gris-texto">
+            Lleva estampada la marca de agua del colegio en todas sus páginas.
+            Al público no se le entrega por aquí: eso pasa por solicitud
+            aprobada.
           </p>
 
-          <button
-            type="button"
-            disabled={quitando}
+          <div className="mt-4 flex flex-wrap items-center gap-5">
+            <button
+              type="button"
+              disabled={abriendo}
+              onClick={() =>
+                iniciarAbrir(async () => {
+                  setError(null);
+                  const r = await verDocumento(projectId);
+                  if (r.ok) setVista(r.url);
+                  else setError(r.error);
+                })
+              }
+              className="rounded-pieza bg-blanco px-5 py-2.5 text-sm font-bold text-morado-hondo ring-1 ring-gris ring-inset transition-transform duration-200 active:scale-[0.98] disabled:opacity-60"
+            >
+              {abriendo ? "Abriendo" : vista ? "Actualizar vista" : "Ver documento"}
+            </button>
+
+            <button
+              type="button"
+              disabled={quitando}
             onClick={() =>
               iniciarQuitar(async () => {
                 const r = await quitarDocumento(projectId);
@@ -107,10 +128,25 @@ export function DocumentUpload({ projectId, documento }: Props) {
                 else router.refresh();
               })
             }
-            className="mt-4 text-sm text-morado-hondo underline underline-offset-4 disabled:opacity-60"
-          >
-            {quitando ? "Quitando" : "Quitar documento"}
-          </button>
+            className="text-sm text-morado-hondo underline underline-offset-4 disabled:opacity-60"
+            >
+              {quitando ? "Quitando" : "Quitar documento"}
+            </button>
+          </div>
+
+          {vista ? (
+            <div className="mt-5">
+              <iframe
+                src={vista}
+                title="Documento del proyecto"
+                className="h-[32rem] w-full rounded-pieza ring-1 ring-gris ring-inset"
+              />
+              <p className="mt-2 text-sm text-gris-texto">
+                Esta vista caduca en un par de minutos. Si deja de cargar,
+                vuelve a pulsar «Actualizar vista».
+              </p>
+            </div>
+          ) : null}
         </div>
       ) : null}
 

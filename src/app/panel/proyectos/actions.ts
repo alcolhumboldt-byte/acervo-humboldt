@@ -6,6 +6,7 @@ import type { ProjectStatus } from "@/generated/prisma/enums";
 import { auth } from "@/auth";
 import {
   confirmUpload,
+  documentViewUrl,
   prepareUpload,
   removeDocument,
 } from "@/modules/catalog/attach-document";
@@ -161,7 +162,35 @@ const MOTIVOS_DOCUMENTO: Record<string, string> = {
   NOT_FOUND: "No encontramos ese proyecto.",
   WRONG_PATH: "La ruta del archivo no corresponde a este proyecto.",
   MISSING_FILE: "El archivo no llegó a subirse. Inténtalo de nuevo.",
+  CANNOT_WATERMARK:
+    "No pudimos abrir ese PDF para marcarlo. Si está protegido con " +
+    "contraseña, vuelve a guardarlo sin protección e inténtalo otra vez.",
 };
+
+/**
+ * Enlace temporal para mirar el documento desde el panel.
+ *
+ * Se pide uno nuevo cada vez y caduca solo. No se guarda en ninguna parte, así
+ * que no queda circulando una dirección que siga abriendo el archivo.
+ */
+export async function verDocumento(
+  projectId: string,
+): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+  await actorActual();
+
+  try {
+    const r = await documentViewUrl(projectId, supabaseStorage);
+
+    return r.ok
+      ? { ok: true, url: r.url }
+      : { ok: false, error: "Este proyecto no tiene documento." };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "No se pudo abrir.",
+    };
+  }
+}
 
 /** Primer paso: el servidor concede permiso para escribir en una ruta suya. */
 export async function prepararDocumento(
