@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { LogoAcervo } from "@/components/logo";
 import { ingresar, type EstadoIngreso } from "./actions";
 
 const INICIAL: EstadoIngreso = {};
@@ -12,7 +13,10 @@ export default function Ingresar() {
     <main className="flex min-h-screen items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
         <div className="mb-8">
-          <p className="text-sm tracking-wide text-gris-texto">Acervo</p>
+          <p className="flex items-center gap-2.5 text-morado-hondo">
+            <LogoAcervo className="h-10 w-10 shrink-0" />
+            <span className="font-titulo text-xl leading-none">Acervo</span>
+          </p>
           <h1 className="mt-1 font-titulo text-3xl tracking-tight text-tinta">
             Ingreso del personal
           </h1>

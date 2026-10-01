@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LogoAcervo } from "@/components/logo";
 import { salir } from "@/app/panel/actions";
 
 export function PanelHeader() {
@@ -6,8 +7,12 @@ export function PanelHeader() {
     <header className="border-b border-gris bg-blanco">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-5">
         <div className="flex flex-wrap items-baseline gap-5">
-          <Link href="/panel" className="font-titulo text-xl text-morado-hondo">
-            Acervo
+          <Link
+            href="/panel"
+            className="flex items-center gap-2.5 text-morado-hondo"
+          >
+            <LogoAcervo className="h-9 w-9 shrink-0" />
+            <span className="font-titulo text-xl leading-none">Acervo</span>
           </Link>
           <Link
             href="/panel/proyectos"
