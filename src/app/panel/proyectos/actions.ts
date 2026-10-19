@@ -175,11 +175,12 @@ const MOTIVOS_DOCUMENTO: Record<string, string> = {
  */
 export async function verDocumento(
   projectId: string,
+  paraDescargar = false,
 ): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
   await actorActual();
 
   try {
-    const r = await documentViewUrl(projectId, supabaseStorage);
+    const r = await documentViewUrl(projectId, supabaseStorage, paraDescargar);
 
     return r.ok
       ? { ok: true, url: r.url }

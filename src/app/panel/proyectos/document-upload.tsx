@@ -26,6 +26,7 @@ export function DocumentUpload({ projectId, documento }: Props) {
   const [subiendo, setSubiendo] = useState(false);
   const [quitando, iniciarQuitar] = useTransition();
   const [abriendo, iniciarAbrir] = useTransition();
+  const [descargando, iniciarDescarga] = useTransition();
   const [vista, setVista] = useState<string | null>(null);
 
   async function subir(archivo: File) {
@@ -116,6 +117,24 @@ export function DocumentUpload({ projectId, documento }: Props) {
               className="rounded-pieza bg-blanco px-5 py-2.5 text-sm font-bold text-morado-hondo ring-1 ring-gris ring-inset transition-transform duration-200 active:scale-[0.98] disabled:opacity-60"
             >
               {abriendo ? "Abriendo" : vista ? "Actualizar vista" : "Ver documento"}
+            </button>
+
+            <button
+              type="button"
+              disabled={descargando}
+              onClick={() =>
+                iniciarDescarga(async () => {
+                  setError(null);
+                  const r = await verDocumento(projectId, true);
+                  // El enlace trae la instrucción de guardar en lugar de abrir,
+                  // así que basta con seguirlo.
+                  if (r.ok) window.location.href = r.url;
+                  else setError(r.error);
+                })
+              }
+              className="rounded-pieza bg-blanco px-5 py-2.5 text-sm font-bold text-morado-hondo ring-1 ring-gris ring-inset transition-transform duration-200 active:scale-[0.98] disabled:opacity-60"
+            >
+              {descargando ? "Preparando" : "Descargar"}
             </button>
 
             <button

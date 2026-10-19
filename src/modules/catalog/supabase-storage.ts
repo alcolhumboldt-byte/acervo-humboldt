@@ -87,10 +87,12 @@ export const supabaseStorage: DocumentStorage = {
 
   /** Enlace de lectura que caduca solo. El depósito sigue siendo privado:
    *  sin este enlace, la ruta no sirve de nada. */
-  async createSignedUrl(path, segundos) {
+  async createSignedUrl(path, segundos, descargarComo) {
     const { data, error } = await cliente()
       .storage.from(BUCKET_DOCUMENTOS)
-      .createSignedUrl(path, segundos);
+      .createSignedUrl(path, segundos, {
+        download: descargarComo ?? false,
+      });
 
     if (error || !data) {
       throw new Error(

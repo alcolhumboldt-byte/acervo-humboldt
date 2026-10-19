@@ -30,8 +30,18 @@ export interface DocumentStorage {
   download(path: string): Promise<Uint8Array>;
   /** Sobrescribe lo que haya en esa ruta. */
   replace(path: string, bytes: Uint8Array): Promise<void>;
-  /** Enlace de lectura que caduca solo. Nunca se guarda ni se publica. */
-  createSignedUrl(path: string, segundos: number): Promise<string>;
+  /**
+   * Enlace de lectura que caduca solo. Nunca se guarda ni se publica.
+   *
+   * Con `descargarComo` el navegador guarda el archivo en lugar de abrirlo, y
+   * con el nombre que se indique: el nombre real del archivo es un
+   * identificador sin significado, y conviene que lo descargado se reconozca.
+   */
+  createSignedUrl(
+    path: string,
+    segundos: number,
+    descargarComo?: string,
+  ): Promise<string>;
   remove(path: string): Promise<void>;
 }
 
@@ -175,10 +185,11 @@ export const SEGUNDOS_DE_VISTA = 120;
 export async function documentViewUrl(
   projectId: string,
   storage: DocumentStorage,
+  paraDescargar = false,
 ): Promise<{ ok: true; url: string } | { ok: false; reason: "NOT_FOUND" }> {
   const proyecto = await prisma.project.findUnique({
     where: { id: projectId },
-    select: { documentPath: true },
+    select: { documentPath: true, slug: true },
   });
 
   if (!proyecto?.documentPath) {
@@ -187,7 +198,14 @@ export async function documentViewUrl(
 
   return {
     ok: true,
-    url: await storage.createSignedUrl(proyecto.documentPath, SEGUNDOS_DE_VISTA),
+    url: await storage.createSignedUrl(
+      proyecto.documentPath,
+      SEGUNDOS_DE_VISTA,
+      // El nombre visible sale de la dirección del proyecto, nunca del archivo
+      // original ni de los autores: lo descargado circula y no debe llevar
+      // dentro el nombre de un estudiante.
+      paraDescargar ? `${proyecto.slug}.pdf` : undefined,
+    ),
   };
 }
 

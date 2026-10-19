@@ -28,8 +28,9 @@ function almacenFalso() {
     async replace(path, bytes) {
       archivos.set(path, bytes);
     },
-    async createSignedUrl(path, segundos) {
-      return `https://falso.test/${path}?caduca=${segundos}`;
+    async createSignedUrl(path, segundos, descargarComo) {
+      const descarga = descargarComo ? `&download=${descargarComo}` : "";
+      return `https://falso.test/${path}?caduca=${segundos}${descarga}`;
     },
     async remove(path) {
       archivos.delete(path);
@@ -337,5 +338,47 @@ describe("documentViewUrl", () => {
       ok: false,
       reason: "NOT_FOUND",
     });
+  });
+});
+
+describe("descarga desde el panel", () => {
+  it("el enlace de descarga lleva el nombre del proyecto, no el del archivo", async () => {
+    const { actor, id } = await crearActorYProyecto();
+    const { storage, archivos } = almacenFalso();
+    const preparado = await prepareUpload(id, storage);
+    if (!preparado.ok) throw new Error("no preparó");
+    archivos.set(preparado.path, await pdf());
+    await confirmUpload(id, preparado.path, actor, storage);
+
+    const r = await documentViewUrl(id, storage, true);
+
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.url).toContain("download=la-huerta-escolar.pdf");
+  });
+
+  it("el nombre descargado no contiene apellidos de estudiantes", async () => {
+    const { actor, id } = await crearActorYProyecto();
+    const { storage, archivos } = almacenFalso();
+    const preparado = await prepareUpload(id, storage);
+    if (!preparado.ok) throw new Error("no preparó");
+    archivos.set(preparado.path, await pdf());
+    await confirmUpload(id, preparado.path, actor, storage);
+
+    const r = await documentViewUrl(id, storage, true);
+
+    if (r.ok) expect(r.url).not.toContain("Torres");
+  });
+
+  it("la vista normal no fuerza la descarga", async () => {
+    const { actor, id } = await crearActorYProyecto();
+    const { storage, archivos } = almacenFalso();
+    const preparado = await prepareUpload(id, storage);
+    if (!preparado.ok) throw new Error("no preparó");
+    archivos.set(preparado.path, await pdf());
+    await confirmUpload(id, preparado.path, actor, storage);
+
+    const r = await documentViewUrl(id, storage);
+
+    if (r.ok) expect(r.url).not.toContain("download=");
   });
 });
