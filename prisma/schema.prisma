@@ -40,6 +40,7 @@ model User {
   accounts            Account[]
   passwordResetTokens PasswordResetToken[]
   auditLogs           AuditLog[]
+  decidedRequests     DocumentRequest[]
 
   @@index([role])
 }
@@ -143,10 +144,19 @@ model Project {
   documentSize       Int?
   documentUploadedAt DateTime?
 
+  /// Primera página del documento, ya marcada, como archivo aparte.
+  ///
+  /// Es lo único que ve el público. Mostrar el PDF completo y poner al lado un
+  /// botón de solicitud sería un adorno: el visor de cualquier navegador
+  /// permite guardar lo que muestra. Limitando la vista a una página, pedir el
+  /// documento completo vuelve a tener sentido.
+  previewPath String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  authors Author[]
+  authors  Author[]
+  requests DocumentRequest[]
 
   @@index([status, publishedAt])
   @@index([area])
@@ -174,5 +184,47 @@ model Author {
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
+  @@index([projectId])
+}
+
+/// Estado de una solicitud de documento.
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+/// Solicitud de alguien del público para consultar el PDF de un proyecto.
+///
+/// Quien solicita no crea cuenta: deja su nombre, un correo y el motivo. Son
+/// datos personales de un adulto, no de un estudiante, pero igualmente se
+/// guardan solo mientras hagan falta para atender la solicitud.
+model DocumentRequest {
+  id        String @id @default(cuid())
+  projectId String
+
+  requesterName  String
+  requesterEmail String
+  reason         String
+
+  status    RequestStatus @default(PENDING)
+  createdAt DateTime      @default(now())
+
+  decidedAt   DateTime?
+  decidedById String?
+  /// Nota del administrador al rechazar, para poder explicar el motivo.
+  decisionNote String?
+
+  /// Del enlace de entrega solo se guarda su huella: el enlace en claro se
+  /// entrega una vez y no debe poder reconstruirse desde la base de datos.
+  tokenHash      String?   @unique
+  tokenExpiresAt DateTime?
+  /// Marca el momento en que se usó. Un enlace usado no vuelve a servir.
+  tokenUsedAt    DateTime?
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  decidedBy User?  @relation(fields: [decidedById], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
   @@index([projectId])
 }

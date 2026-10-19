@@ -5,11 +5,12 @@ import {
   confirmUpload,
   documentViewUrl,
   prepareUpload,
+  publicPreviewUrl,
   removeDocument,
   type DocumentStorage,
 } from "@/modules/catalog/attach-document";
 import { MAX_DOCUMENT_BYTES } from "@/modules/catalog/document";
-import { createProject } from "@/modules/catalog/projects";
+import { changeStatus, createProject } from "@/modules/catalog/projects";
 
 /** Almacenamiento de mentira: guarda en memoria y recuerda qué se borró. */
 function almacenFalso() {
@@ -380,5 +381,75 @@ describe("descarga desde el panel", () => {
     const r = await documentViewUrl(id, storage);
 
     if (r.ok) expect(r.url).not.toContain("download=");
+  });
+});
+
+describe("vista previa pública", () => {
+  async function conDocumento(paginas = 5) {
+    const { actor, id } = await crearActorYProyecto();
+    const { storage, archivos, borrados } = almacenFalso();
+    const preparado = await prepareUpload(id, storage);
+    if (!preparado.ok) throw new Error("no preparó");
+    archivos.set(preparado.path, await pdf(paginas));
+    await confirmUpload(id, preparado.path, actor, storage);
+    return { actor, id, storage, archivos, borrados, ruta: preparado.path };
+  }
+
+  it("guarda una vista aparte del documento", async () => {
+    const { id, archivos } = await conDocumento();
+
+    const p = await prisma.project.findUnique({ where: { id } });
+    expect(p?.previewPath).not.toBeNull();
+    expect(p?.previewPath).not.toBe(p?.documentPath);
+    expect(archivos.has(p?.previewPath ?? "")).toBe(true);
+  });
+
+  it("la vista tiene una sola página aunque el documento tenga muchas", async () => {
+    const { id, archivos } = await conDocumento(9);
+
+    const p = await prisma.project.findUnique({ where: { id } });
+    const vista = await PDFDocument.load(archivos.get(p?.previewPath ?? "")!);
+    expect(vista.getPageCount()).toBe(1);
+  });
+
+  it("no da enlace mientras el proyecto está en borrador", async () => {
+    // Sin esta comprobación, conocer la dirección de un borrador bastaría
+    // para asomarse a su contenido antes de que nadie lo apruebe.
+    const { storage } = await conDocumento();
+
+    expect(await publicPreviewUrl("la-huerta-escolar", storage)).toBeNull();
+  });
+
+  it("da enlace en cuanto el proyecto se publica", async () => {
+    const { actor, id, storage } = await conDocumento();
+    const admin = { id: actor.id, role: "ADMIN" as const };
+    await changeStatus(id, "REVIEW", admin);
+    await changeStatus(id, "PUBLISHED", admin);
+
+    const url = await publicPreviewUrl("la-huerta-escolar", storage);
+
+    expect(url).toContain("-vista.pdf");
+  });
+
+  it("al quitar el documento también desaparece la vista", async () => {
+    const { actor, id, storage, archivos } = await conDocumento();
+
+    await removeDocument(id, actor, storage);
+
+    expect(archivos.size).toBe(0);
+    const p = await prisma.project.findUnique({ where: { id } });
+    expect(p?.previewPath).toBeNull();
+  });
+
+  it("al reemplazar el documento no quedan vistas huérfanas", async () => {
+    const { id, actor, storage, archivos } = await conDocumento();
+
+    const segunda = await prepareUpload(id, storage);
+    if (!segunda.ok) throw new Error("no preparó");
+    archivos.set(segunda.path, await pdf(2));
+    await confirmUpload(id, segunda.path, actor, storage);
+
+    // Solo deben quedar el documento nuevo y su vista.
+    expect(archivos.size).toBe(2);
   });
 });

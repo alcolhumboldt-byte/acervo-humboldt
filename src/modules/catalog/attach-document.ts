@@ -6,6 +6,7 @@ import {
   type DocumentIssue,
 } from "@/modules/catalog/document";
 import type { Actor } from "@/modules/catalog/projects";
+import { buildPreview } from "@/modules/catalog/preview";
 import { applyWatermark } from "@/modules/catalog/watermark";
 import { INSTITUCION } from "@/config/institucion";
 
@@ -59,6 +60,12 @@ export type ConfirmResult =
 
 /** Lo que queda estampado en cada página de cada documento guardado. */
 export const TEXTO_MARCA = `${INSTITUCION.nombre} · uso restringido`;
+
+/** La vista previa vive junto al documento, con el mismo nombre y un sufijo.
+ *  Así borrar un proyecto o un documento arrastra siempre a las dos. */
+function rutaDeVista(documento: string): string {
+  return documento.replace(/\.pdf$/, "-vista.pdf");
+}
 
 /** La ruta la construye el servidor; al confirmar se comprueba que la que
  *  devuelve el navegador sea de ese proyecto y no de otro. */
@@ -151,12 +158,17 @@ export async function confirmUpload(
 
   await storage.replace(path, marcado);
 
+  // La vista previa se saca del archivo ya marcado, así que hereda la marca.
+  const rutaVista = rutaDeVista(path);
+  await storage.replace(rutaVista, await buildPreview(marcado));
+
   await prisma.project.update({
     where: { id: projectId },
     data: {
       documentPath: path,
       documentSize: marcado.length,
       documentUploadedAt: new Date(),
+      previewPath: rutaVista,
     },
   });
 
@@ -164,6 +176,7 @@ export async function confirmUpload(
   // mitad dejaría al proyecto sin ningún documento.
   if (proyecto.documentPath && proyecto.documentPath !== path) {
     await storage.remove(proyecto.documentPath);
+    await storage.remove(rutaDeVista(proyecto.documentPath));
   }
 
   await registrar("PROJECT_DOCUMENT_ATTACHED", actor, projectId, {
@@ -209,6 +222,35 @@ export async function documentViewUrl(
   };
 }
 
+/** Cuánto dura el enlace de la vista previa pública. */
+export const SEGUNDOS_DE_VISTA_PUBLICA = 600;
+
+/**
+ * Enlace a la primera página, para la ficha pública de un proyecto.
+ *
+ * Filtra por estado PUBLISHED dentro de la consulta. Sin ese filtro, conocer
+ * la dirección de un borrador bastaría para asomarse a su contenido, que es
+ * justo lo que el ciclo de aprobación existe para impedir.
+ */
+export async function publicPreviewUrl(
+  slug: string,
+  storage: DocumentStorage,
+): Promise<string | null> {
+  const proyecto = await prisma.project.findFirst({
+    where: { slug, status: "PUBLISHED" },
+    select: { previewPath: true },
+  });
+
+  if (!proyecto?.previewPath) {
+    return null;
+  }
+
+  return storage.createSignedUrl(
+    proyecto.previewPath,
+    SEGUNDOS_DE_VISTA_PUBLICA,
+  );
+}
+
 export async function removeDocument(
   projectId: string,
   actor: Actor,
@@ -216,7 +258,7 @@ export async function removeDocument(
 ): Promise<{ ok: true } | { ok: false; reason: "NOT_FOUND" }> {
   const proyecto = await prisma.project.findUnique({
     where: { id: projectId },
-    select: { id: true, documentPath: true },
+    select: { id: true, documentPath: true, previewPath: true },
   });
 
   if (!proyecto) {
@@ -226,12 +268,17 @@ export async function removeDocument(
   if (proyecto.documentPath) {
     await storage.remove(proyecto.documentPath);
 
+    if (proyecto.previewPath) {
+      await storage.remove(proyecto.previewPath);
+    }
+
     await prisma.project.update({
       where: { id: projectId },
       data: {
         documentPath: null,
         documentSize: null,
         documentUploadedAt: null,
+        previewPath: null,
       },
     });
 

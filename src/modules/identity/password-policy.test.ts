@@ -70,7 +70,7 @@ describe("validatePassword", () => {
 
   it("compara los datos personales sin distinguir mayúsculas ni tildes", () => {
     const resultado = validatePassword("Marimba-gomez-94!", {
-      name: "Andrés Gómez",
+      name: "Esteban Gómez",
     });
     expect(motivos(resultado)).toContain("CONTAINS_PERSONAL_DATA");
   });

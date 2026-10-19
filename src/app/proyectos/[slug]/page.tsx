@@ -4,6 +4,8 @@ import type { Metadata } from "next";
 import { AvisoNombres } from "@/components/aviso-nombres";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import { publicPreviewUrl } from "@/modules/catalog/attach-document";
+import { supabaseStorage } from "@/modules/catalog/supabase-storage";
 import { gradeLabel, getPublishedProject } from "@/modules/discovery/projects";
 
 export const dynamic = "force-dynamic";
@@ -28,6 +30,12 @@ export default async function ProyectoDetalle({
   if (!proyecto) {
     notFound();
   }
+
+  // Un fallo del almacenamiento no debe tumbar la ficha entera: sin vista
+  // previa la página sigue siendo útil.
+  const vistaPrevia = await publicPreviewUrl(slug, supabaseStorage).catch(
+    () => null,
+  );
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -59,10 +67,32 @@ export default async function ProyectoDetalle({
             <h2 className="font-titulo text-lg tracking-tight text-tinta">
               Documento del proyecto
             </h2>
-            <p className="mt-2 max-w-[60ch] text-sm leading-relaxed text-gris-texto">
-              La consulta del documento completo se solicita al colegio y
-              requiere aprobación. Esa función todavía no está disponible.
-            </p>
+
+            {vistaPrevia ? (
+              <>
+                <p className="mt-2 max-w-[60ch] text-sm leading-relaxed text-gris-texto">
+                  Esta es la primera página. El documento completo se solicita
+                  al colegio y requiere aprobación.
+                </p>
+
+                <iframe
+                  src={vistaPrevia}
+                  title="Primera página del documento"
+                  className="mt-6 h-[34rem] w-full rounded-pieza bg-blanco ring-1 ring-gris ring-inset"
+                />
+
+                <Link
+                  href={`/proyectos/${proyecto.slug}/solicitar`}
+                  className="mt-6 inline-block rounded-pieza bg-morado px-6 py-3 font-bold text-blanco transition-[background-color,transform] duration-200 hover:bg-morado-hondo active:scale-[0.98]"
+                >
+                  Solicitar el documento completo
+                </Link>
+              </>
+            ) : (
+              <p className="mt-2 max-w-[60ch] text-sm leading-relaxed text-gris-texto">
+                Este proyecto todavía no tiene documento publicado.
+              </p>
+            )}
           </div>
 
           <div className="mt-10">
