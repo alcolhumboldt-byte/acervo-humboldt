@@ -14,6 +14,7 @@ import { DOCUMENT_MESSAGES } from "@/modules/catalog/document";
 import { supabaseStorage } from "@/modules/catalog/supabase-storage";
 import {
   createProject,
+  deleteProject,
   changeStatus,
   updateProject,
   VALIDATION_MESSAGES,
@@ -266,4 +267,26 @@ export async function quitarDocumento(
       error: error instanceof Error ? error.message : "No se pudo quitar.",
     };
   }
+}
+
+const MOTIVOS_BORRADO: Record<string, string> = {
+  NOT_FOUND: "No encontramos ese proyecto.",
+  NOT_ALLOWED: "Solo un administrador puede eliminar proyectos.",
+};
+
+export async function eliminarProyecto(
+  projectId: string,
+  _anterior: EstadoFormulario,
+): Promise<EstadoFormulario> {
+  const actor = await actorActual();
+  const resultado = await deleteProject(projectId, actor, supabaseStorage);
+
+  if (!resultado.ok) {
+    return { errores: [MOTIVOS_BORRADO[resultado.reason] ?? "No se pudo."] };
+  }
+
+  revalidatePath("/panel/proyectos");
+  revalidatePath("/");
+  revalidatePath("/proyectos");
+  redirect("/panel/proyectos");
 }

@@ -334,3 +334,53 @@ export async function getProjectForPanel(id: string) {
     },
   });
 }
+
+/**
+ * Elimina un proyecto por completo.
+ *
+ * Reservado a administración. Borrar es la única acción del panel que no tiene
+ * vuelta atrás: los autores y las solicitudes asociadas desaparecen con él por
+ * arrastre, y los archivos se retiran del almacenamiento.
+ *
+ * Para retirar algo del portal sin destruirlo existe el estado «archivado»,
+ * que conserva el trabajo y su historia.
+ */
+export async function deleteProject(
+  id: string,
+  actor: Actor,
+  storage: {
+    remove(path: string): Promise<void>;
+  },
+): Promise<
+  { ok: true } | { ok: false; reason: "NOT_FOUND" | "NOT_ALLOWED" }
+> {
+  if (actor.role !== "ADMIN") {
+    return { ok: false, reason: "NOT_ALLOWED" };
+  }
+
+  const proyecto = await prisma.project.findUnique({
+    where: { id },
+    select: { id: true, slug: true, documentPath: true, previewPath: true },
+  });
+
+  if (!proyecto) {
+    return { ok: false, reason: "NOT_FOUND" };
+  }
+
+  // Primero los archivos: si quedaran, nadie los reclamaría nunca y ocuparían
+  // espacio para siempre. Un fallo aquí deja el proyecto en pie, que es
+  // preferible a dejar huérfano su documento.
+  for (const ruta of [proyecto.documentPath, proyecto.previewPath]) {
+    if (ruta) {
+      await storage.remove(ruta);
+    }
+  }
+
+  await prisma.project.delete({ where: { id } });
+
+  // La constancia se escribe después de borrar y guarda la dirección y nada
+  // más: sirve para saber qué desapareció, no para reconstruir a sus autores.
+  await registrar("PROJECT_DELETED", actor, id, { slug: proyecto.slug });
+
+  return { ok: true };
+}

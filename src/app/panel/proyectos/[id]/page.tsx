@@ -8,6 +8,7 @@ import {
   allowedTransitions,
   getProjectForPanel,
 } from "@/modules/catalog/projects";
+import { DeleteProject } from "../delete-project";
 import { DocumentUpload } from "../document-upload";
 import { actualizarProyecto } from "../actions";
 import { ProjectForm } from "../project-form";
@@ -107,6 +108,10 @@ export default async function EditarProyecto({
             textoBoton="Guardar cambios"
           />
         </section>
+
+        {sesion.user.role === "ADMIN" ? (
+          <DeleteProject projectId={proyecto.id} titulo={proyecto.title} />
+        ) : null}
       </main>
     </div>
   );

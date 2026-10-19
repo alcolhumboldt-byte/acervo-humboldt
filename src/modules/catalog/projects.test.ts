@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import {
   allowedTransitions,
   changeStatus,
+  deleteProject,
   createProject,
   updateProject,
   validateProject,
@@ -320,5 +321,131 @@ describe("allowedTransitions", () => {
 
   it("un administrador puede recuperar un archivado", () => {
     expect(allowedTransitions("ARCHIVED", "ADMIN")).toEqual(["PUBLISHED"]);
+  });
+});
+
+describe("deleteProject", () => {
+  function almacenFalso() {
+    const borrados: string[] = [];
+    return {
+      borrados,
+      storage: {
+        async createUploadUrl() {
+          return { url: "", token: "" };
+        },
+        async download() {
+          return new Uint8Array();
+        },
+        async replace() {},
+        async createSignedUrl() {
+          return "";
+        },
+        async remove(path: string) {
+          borrados.push(path);
+        },
+      },
+    };
+  }
+
+  it("un docente no puede eliminar", async () => {
+    const actor = await crearActor("DOCENTE");
+    const creado = await createProject(VALIDO, actor);
+    if (!creado.ok) throw new Error("no se creó");
+    const { storage } = almacenFalso();
+
+    const r = await deleteProject(creado.id, actor, storage);
+
+    expect(r).toEqual({ ok: false, reason: "NOT_ALLOWED" });
+    expect(await prisma.project.count({})).toBe(1);
+  });
+
+  it("un administrador sí puede", async () => {
+    const admin = await crearActor("ADMIN");
+    const creado = await createProject(VALIDO, admin);
+    if (!creado.ok) throw new Error("no se creó");
+    const { storage } = almacenFalso();
+
+    const r = await deleteProject(creado.id, admin, storage);
+
+    expect(r.ok).toBe(true);
+    expect(await prisma.project.count({})).toBe(0);
+  });
+
+  it("se lleva por delante a los autores", async () => {
+    const admin = await crearActor("ADMIN");
+    const creado = await createProject(VALIDO, admin);
+    if (!creado.ok) throw new Error("no se creó");
+    const { storage } = almacenFalso();
+
+    await deleteProject(creado.id, admin, storage);
+
+    expect(await prisma.author.count({})).toBe(0);
+  });
+
+  it("borra el documento y su vista previa del almacenamiento", async () => {
+    // Sin esto los archivos quedarían ocupando espacio para siempre, sin
+    // ningún proyecto que los reclame.
+    const admin = await crearActor("ADMIN");
+    const creado = await createProject(VALIDO, admin);
+    if (!creado.ok) throw new Error("no se creó");
+    await prisma.project.update({
+      where: { id: creado.id },
+      data: {
+        documentPath: "proyectos/x/doc.pdf",
+        previewPath: "proyectos/x/doc-vista.pdf",
+      },
+    });
+    const { storage, borrados } = almacenFalso();
+
+    await deleteProject(creado.id, admin, storage);
+
+    expect(borrados).toContain("proyectos/x/doc.pdf");
+    expect(borrados).toContain("proyectos/x/doc-vista.pdf");
+  });
+
+  it("no falla si el proyecto no tenía documento", async () => {
+    const admin = await crearActor("ADMIN");
+    const creado = await createProject(VALIDO, admin);
+    if (!creado.ok) throw new Error("no se creó");
+    const { storage } = almacenFalso();
+
+    expect((await deleteProject(creado.id, admin, storage)).ok).toBe(true);
+  });
+
+  it("responde NOT_FOUND si no existe", async () => {
+    const admin = await crearActor("ADMIN");
+    const { storage } = almacenFalso();
+
+    expect(await deleteProject("inexistente", admin, storage)).toEqual({
+      ok: false,
+      reason: "NOT_FOUND",
+    });
+  });
+
+  it("deja constancia de qué se borró", async () => {
+    const admin = await crearActor("ADMIN");
+    const creado = await createProject(VALIDO, admin);
+    if (!creado.ok) throw new Error("no se creó");
+    const { storage } = almacenFalso();
+
+    await deleteProject(creado.id, admin, storage);
+
+    const registro = await prisma.auditLog.findFirst({
+      where: { action: "PROJECT_DELETED" },
+    });
+    expect(registro?.actorId).toBe(admin.id);
+    expect(registro?.metadata).toMatchObject({ slug: "la-huerta-escolar" });
+  });
+
+  it("la constancia no incluye nombres de estudiantes", async () => {
+    const admin = await crearActor("ADMIN");
+    const creado = await createProject(VALIDO, admin);
+    if (!creado.ok) throw new Error("no se creó");
+    const { storage } = almacenFalso();
+
+    await deleteProject(creado.id, admin, storage);
+
+    const registros = await prisma.auditLog.findMany({});
+    expect(JSON.stringify(registros)).not.toContain("Torres");
   });
 });
