@@ -83,9 +83,23 @@ export default async function ProyectoDetalle({
 
                 <Link
                   href={`/proyectos/${proyecto.slug}/solicitar`}
-                  className="mt-6 inline-block rounded-pieza bg-morado px-6 py-3 font-bold text-blanco transition-[background-color,transform] duration-200 hover:bg-morado-hondo active:scale-[0.98]"
+                  className="mt-6 inline-flex items-center gap-2.5 rounded-pieza bg-morado px-6 py-3 font-bold text-blanco shadow-capa transition-[background-color,transform] duration-200 hover:bg-morado-hondo active:scale-[0.98]"
                 >
-                  Solicitar el documento completo
+                  {/* Flecha hacia una bandeja: el gesto universal de descargar. */}
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 20 20"
+                    className="h-5 w-5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M10 3v9m0 0 3.5-3.5M10 12 6.5 8.5" />
+                    <path d="M3.5 14v1.5A1.5 1.5 0 0 0 5 17h10a1.5 1.5 0 0 0 1.5-1.5V14" />
+                  </svg>
+                  Descargar el documento completo
                 </Link>
               </>
             ) : (
