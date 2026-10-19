@@ -12,7 +12,49 @@ import { PDFDocument, StandardFonts, degrees, rgb } from "pdf-lib";
  */
 
 /** Tenue: tiene que leerse sin tapar el trabajo del estudiante. */
-const OPACIDAD = 0.14;
+const OPACIDAD = 0.13;
+
+/** Qué parte de la diagonal ocupa la marca. Calcularlo contra la diagonal, y
+ *  no contra el ancho, da un tamaño proporcionado tanto en hoja vertical como
+ *  apaisada sin tener que distinguir los casos. */
+const PROPORCION = 0.86;
+
+export interface ColocacionMarca {
+  size: number;
+  x: number;
+  y: number;
+  gradosRotacion: number;
+}
+
+/**
+ * Dónde y de qué tamaño va la marca en una página.
+ *
+ * Separado del dibujo para poder comprobar que cabe: una marca que se sale de
+ * la hoja se recorta en silencio y nadie lo nota hasta que alguien abre un
+ * documento apaisado.
+ */
+export function calcularColocacion(
+  anchoPagina: number,
+  altoPagina: number,
+  anchoDelTextoATamanoUno: number,
+): ColocacionMarca {
+  const diagonal = Math.hypot(anchoPagina, altoPagina);
+  const anguloRad = Math.atan2(altoPagina, anchoPagina);
+
+  // El ancho del texto crece en proporción directa al tamaño, así que basta
+  // medirlo una vez para despejar el tamaño buscado.
+  const size = (diagonal * PROPORCION) / anchoDelTextoATamanoUno;
+  const anchoTexto = anchoDelTextoATamanoUno * size;
+
+  return {
+    size,
+    // Se centra restando medio texto desde el centro de la hoja, siguiendo la
+    // dirección en que va escrito.
+    x: anchoPagina / 2 - (anchoTexto / 2) * Math.cos(anguloRad),
+    y: altoPagina / 2 - (anchoTexto / 2) * Math.sin(anguloRad),
+    gradosRotacion: (anguloRad * 180) / Math.PI,
+  };
+}
 
 export async function applyWatermark(
   bytes: Uint8Array,
@@ -31,22 +73,22 @@ export async function applyWatermark(
 
   const fuente = await documento.embedFont(StandardFonts.Helvetica);
 
+  const anchoUnitario = fuente.widthOfTextAtSize(texto, 1);
+
   for (const pagina of documento.getPages()) {
     const { width, height } = pagina.getSize();
+    const marca = calcularColocacion(width, height, anchoUnitario);
 
-    // El tamaño se calcula desde el ancho para que la marca ocupe un espacio
-    // parecido tanto en una hoja vertical como en una apaisada.
-    const tamano = Math.max(12, width / (texto.length * 0.52));
-    const ancho = fuente.widthOfTextAtSize(texto, tamano);
-
+    // La marca corre de esquina a esquina: el ángulo sale de la propia hoja,
+    // así que acompaña su forma en lugar de cruzarla siempre igual.
     pagina.drawText(texto, {
-      x: (width - ancho * 0.82) / 2,
-      y: height / 2 - ancho * 0.28,
-      size: tamano,
+      x: marca.x,
+      y: marca.y,
+      size: marca.size,
       font: fuente,
       color: rgb(0.29, 0.16, 0.39),
       opacity: OPACIDAD,
-      rotate: degrees(35),
+      rotate: degrees(marca.gradosRotacion),
     });
   }
 

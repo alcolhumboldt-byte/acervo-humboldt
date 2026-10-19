@@ -1,6 +1,9 @@
 import { PDFDocument, PDFName } from "pdf-lib";
 import { describe, expect, it } from "vitest";
-import { applyWatermark } from "@/modules/catalog/watermark";
+import {
+  applyWatermark,
+  calcularColocacion,
+} from "@/modules/catalog/watermark";
 
 /** PDF real con páginas en blanco: así, todo lo que aparezca dibujado
  *  después viene de la marca de agua y de nada más. */
@@ -91,5 +94,53 @@ describe("applyWatermark", () => {
     await expect(applyWatermark(basura, MARCA)).rejects.toThrow(
       /no se pudo leer/i,
     );
+  });
+});
+
+describe("calcularColocacion", () => {
+  /** Ancho aproximado de una frase de 46 caracteres a tamaño 1. */
+  const ANCHO_UNITARIO = 23;
+
+  const formatos: [string, number, number][] = [
+    ["carta vertical", 612, 792],
+    ["A4 vertical", 595, 842],
+    ["A4 apaisado", 842, 595],
+    ["muy alargado", 300, 1200],
+    ["casi cuadrado", 600, 620],
+  ];
+
+  for (const [nombre, ancho, alto] of formatos) {
+    it(`cabe dentro de la página en ${nombre}`, () => {
+      const m = calcularColocacion(ancho, alto, ANCHO_UNITARIO);
+      const anchoTexto = ANCHO_UNITARIO * m.size;
+      const rad = (m.gradosRotacion * Math.PI) / 180;
+
+      const finX = m.x + anchoTexto * Math.cos(rad);
+      const finY = m.y + anchoTexto * Math.sin(rad);
+
+      expect(m.x).toBeGreaterThan(0);
+      expect(m.y).toBeGreaterThan(0);
+      expect(finX).toBeLessThan(ancho);
+      expect(finY).toBeLessThan(alto);
+    });
+  }
+
+  it("queda centrada en la página", () => {
+    const m = calcularColocacion(600, 800, ANCHO_UNITARIO);
+    const anchoTexto = ANCHO_UNITARIO * m.size;
+    const rad = (m.gradosRotacion * Math.PI) / 180;
+
+    const centroX = m.x + (anchoTexto / 2) * Math.cos(rad);
+    const centroY = m.y + (anchoTexto / 2) * Math.sin(rad);
+
+    expect(Math.round(centroX)).toBe(300);
+    expect(Math.round(centroY)).toBe(400);
+  });
+
+  it("crece con la página", () => {
+    const pequena = calcularColocacion(300, 400, ANCHO_UNITARIO);
+    const grande = calcularColocacion(900, 1200, ANCHO_UNITARIO);
+
+    expect(grande.size).toBeGreaterThan(pequena.size * 2.5);
   });
 });
