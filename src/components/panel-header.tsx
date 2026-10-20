@@ -21,6 +21,12 @@ export function PanelHeader() {
             Proyectos
           </Link>
           <Link
+            href="/panel/solicitudes"
+            className="text-sm text-gris-texto underline underline-offset-4"
+          >
+            Solicitudes
+          </Link>
+          <Link
             href="/"
             className="text-sm text-gris-texto underline underline-offset-4"
           >
